@@ -81,3 +81,30 @@ def test_penalty_breakdown_chart():
     assert fig is not None
     assert len(fig.data) >= 1
 
+def test_live_bridge_sync():
+    from aegisnode.data.live_bridge import (
+        get_live_state,
+        update_courier_action,
+        update_warden_state,
+        reset_live_state,
+    )
+    # Reset and test default state
+    reset_live_state()
+    state = get_live_state()
+    assert state is not None
+    assert "active_scenario" in state
+
+    # Trigger GPS Spoof
+    s_spoof = update_courier_action("TRIGGER_GPS_SPOOF", "fraud_gps_spoof.json")
+    assert s_spoof["warden_action"] == "PACKAGE_FREEZE"
+    assert s_spoof["trust_score"] == 18
+
+    # Trigger OTP Challenge
+    s_otp = update_courier_action("SUBMIT_OTP", "fraud_pod_spoof.json", otp_code="849201")
+    assert s_otp["otp_verified"] is True
+    assert s_otp["warden_action"] == "AUTO_CLEAR"
+
+    # Clean up
+    reset_live_state()
+
+

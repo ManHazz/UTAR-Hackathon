@@ -1,0 +1,11 @@
+{
+  "active_scenario": "fraud_gps_spoof.json",
+  "last_action_timestamp": 1791554107.1197546,
+  "courier_action": "STANDBY",
+  "otp_input": "",
+  "otp_verified": false,
+  "warden_action": "PACKAGE_FREEZE",
+  "trust_score": 18,
+  "highest_velocity_kmh": 458.0,
+  "last_message": "Session initialized. Awaiting courier telematics."
+}

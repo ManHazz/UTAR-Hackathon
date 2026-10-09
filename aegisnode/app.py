@@ -33,6 +33,9 @@ from aegisnode.ui.pod_viewer import render_pod_inspector
 from aegisnode.ui.handset_simulator import render_courier_handset
 from aegisnode.ui.ledger_view import render_cryptographic_ledger
 
+from aegisnode.ui.mobile_view import render_mobile_courier_view
+from aegisnode.data.live_bridge import get_live_state, update_warden_state
+
 # 1. Page Configuration (Strict enterprise styling)
 st.set_page_config(
     page_title="AegisNode | Zero-Trust Logistics Command Center",
@@ -42,6 +45,13 @@ st.set_page_config(
 
 # 2. Inject Cyber-Physical Custom CSS
 st.markdown(get_custom_css(), unsafe_allow_html=True)
+
+# 3. Dedicated Mobile Courier Handset Mode Check (?mode=courier or ?view=handset)
+mode_param = st.query_params.get("mode", "").lower()
+view_param = st.query_params.get("view", "").lower()
+if mode_param in ("courier", "phone", "driver") or view_param in ("handset", "phone") or st.session_state.get("mobile_mode_active", False):
+    render_mobile_courier_view()
+    st.stop()
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -99,6 +109,21 @@ with st.sidebar:
         </div>
     </div>
     """)
+
+    render_html("""
+    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight: 700; color: #10B981;">LIVE PHONE BRIDGE</span>
+            <span style="background:#10B981; color:#000; font-size:9px; font-weight:800; padding:1px 5px; border-radius:3px;">ONLINE</span>
+        </div>
+        <div style="color: #94A3B8; margin-top: 4px;">Open on phone for field demo:</div>
+        <div style="color: #38BDF8; font-family: monospace; font-size:10px; margin-top: 2px;">?mode=courier</div>
+    </div>
+    """)
+
+    if st.button("Open Handset View (Full Screen)", use_container_width=True, help="Switch this window to courier mobile handset"):
+        st.session_state.mobile_mode_active = True
+        st.rerun()
 
     st.markdown("### **Incident Scenarios**")
     
@@ -207,6 +232,26 @@ with col_s4:
         select_scenario("fraud_api_scraping.json")
         st.rerun()
 
+# Real-Time Mobile Bridge Synchronizer
+@st.fragment(run_every="1s")
+def _sync_live_courier_bridge():
+    state = get_live_state()
+    last_ts = st.session_state.get("last_bridge_ts", 0.0)
+    curr_ts = state.get("last_action_timestamp", 0.0)
+    if curr_ts > last_ts and curr_ts > 0:
+        st.session_state.last_bridge_ts = curr_ts
+        target_scn = state.get("active_scenario")
+        if target_scn and target_scn != st.session_state.active_scenario_file:
+            st.session_state.active_scenario_file = target_scn
+            if state.get("otp_verified"):
+                st.session_state.otp_cleared = True
+            st.rerun()
+        elif state.get("otp_verified") and not st.session_state.otp_cleared:
+            st.session_state.otp_cleared = True
+            st.rerun()
+
+_sync_live_courier_bridge()
+
 # Run Orchestrator Pipeline
 scenario_data = load_scenario(st.session_state.active_scenario_file)
 result = st.session_state.orchestrator.process_shipment(scenario_data)
@@ -228,6 +273,15 @@ if st.session_state.otp_cleared and st.session_state.active_scenario_file == "fr
         "Driver commission RM 4.50 cleared for batch settlement",
         "Cryptographic ledger state updated"
     ]
+
+# Synchronize current Warden policy decision back to phone handset
+update_warden_state(
+    warden_action=warden.get("action", "AUTO_CLEAR"),
+    trust_score=int(investigator.get("trust_score", 100)),
+    velocity=float(sentinel.get("highest_velocity_kmh", 0.0)),
+    message=warden.get("message", "Telemetry nominal."),
+    otp_verified=st.session_state.otp_cleared
+)
 
 # Latency Mode Simulation
 if run_sim and animate_pitch and sentinel.get("anomalies_detected", False):
