@@ -82,14 +82,10 @@ if "otp_cleared" not in st.session_state:
     st.session_state.otp_cleared = False
 
 def select_scenario(filename: str):
-    """Synchronizes active scenario file and sidebar selectbox widget key."""
+    """Sets active scenario and resets transient state."""
     st.session_state.active_scenario_file = filename
     st.session_state.otp_cleared = False
     st.session_state.supervisor_action = None
-    for label, fn in SCENARIO_KEYS.items():
-        if fn == filename:
-            st.session_state["scenario_selector"] = label
-            break
 
 # --- SIDEBAR NAVIGATION & CONTROLLER ---
 with st.sidebar:
@@ -106,26 +102,18 @@ with st.sidebar:
 
     st.markdown("### **Incident Scenarios**")
     
-    label_to_file = SCENARIO_KEYS
-    file_to_label = {v: k for k, v in label_to_file.items()}
-    current_label = file_to_label.get(st.session_state.active_scenario_file, list(label_to_file.keys())[0])
-
-    if "scenario_selector" not in st.session_state:
-        st.session_state["scenario_selector"] = current_label
-
-    def _on_dropdown_scenario_change():
-        chosen_label = st.session_state["scenario_selector"]
-        st.session_state.active_scenario_file = label_to_file[chosen_label]
-        st.session_state.otp_cleared = False
-        st.session_state.supervisor_action = None
+    scenario_options = list(SCENARIO_KEYS.keys())
+    scenario_files = list(SCENARIO_KEYS.values())
+    current_idx = scenario_files.index(st.session_state.active_scenario_file) if st.session_state.active_scenario_file in scenario_files else 0
 
     selected_label = st.selectbox(
         "Select Live Incident Scenario:",
-        list(label_to_file.keys()),
-        key="scenario_selector",
-        on_change=_on_dropdown_scenario_change
+        options=scenario_options,
+        index=current_idx,
     )
-    st.session_state.active_scenario_file = label_to_file[st.session_state["scenario_selector"]]
+    if SCENARIO_KEYS[selected_label] != st.session_state.active_scenario_file:
+        select_scenario(SCENARIO_KEYS[selected_label])
+        st.rerun()
 
     run_sim = st.button("Run Telemetry Analysis", use_container_width=True, type="primary")
     animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=True, help="Simulates multi-agent scanning latency")
