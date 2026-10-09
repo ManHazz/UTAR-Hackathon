@@ -91,7 +91,7 @@ Verify that all agents and UI components are working properly:
 ```bash
 python -m pytest aegisnode/tests
 ```
-*(All 12 automated unit tests should pass with green status.)*
+*(All 15 automated unit and UI tests should pass with green status.)*
 
 ### Step 3: Launch the Command Center Dashboard
 ```bash
@@ -143,8 +143,9 @@ UTAR-Hackathon/
 │   └── tests/
 │       ├── test_agents.py          # Unit tests for agents & cryptographic ledger
 │       └── test_ui.py              # Unit tests for charts & styles
+├── PROJECT_PROPOSAL.md             # Complete academic proposal, citations & methodology
 ├── TEAM_GUIDE.md                   # Complete guide for teammates & pitch playbook
-├── requirements.txt                # Python dependencies
+├── requirements.txt                # Project dependencies (Streamlit, Folium, Plotly, etc.)
 └── README.md                       # Main project documentation
 ```
 
@@ -152,6 +153,7 @@ UTAR-Hackathon/
 
 ## 6. Teammate & Presentation Resources
 
+* Read **[`PROJECT_PROPOSAL.md`](./PROJECT_PROPOSAL.md)** for the complete academic proposal report, literature review, APA 7th citations, and mathematical formulas.
 * Read **[`TEAM_GUIDE.md`](./TEAM_GUIDE.md)** for:
   * Simple explanation of how each teammate can speak during the hackathon pitch.
   * 7-Minute presentation script with exact cue times.
