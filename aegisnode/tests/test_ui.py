@@ -164,5 +164,30 @@ def test_live_camera_photo_forensic_analysis():
 
     reset_live_state()
 
+def test_build_live_scenario_data():
+    from aegisnode.data.live_bridge import (
+        build_live_scenario_data,
+        update_courier_telematics,
+        trigger_gps_spoof,
+        reset_live_state
+    )
+    reset_live_state()
+    # 1. Nominal scenario at UTP
+    update_courier_telematics(4.385200, 100.978100, label="UTP Tronoh")
+    sc = build_live_scenario_data()
+    assert sc["shipment_id"] == "GDX-SHP-20261003-042"
+    assert len(sc["events"]) == 4
+    assert sc["events"][0]["location"]["lat"] == 4.3885
+    assert sc["events"][2]["location"]["lat"] == 4.3852
+
+    # 2. GPS Spoof scenario
+    trigger_gps_spoof(start_lat=4.3852, start_lon=100.9781)
+    sc_spoof = build_live_scenario_data()
+    assert sc_spoof["events"][-1]["location"]["lat"] == 3.1032
+    assert sc_spoof["events"][-1]["speed_kmh"] > 1000.0
+
+    reset_live_state()
+
+
 
 

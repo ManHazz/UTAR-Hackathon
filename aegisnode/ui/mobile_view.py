@@ -195,11 +195,13 @@ def render_mobile_courier_view():
         <div id="gps-status" style="margin-top:6px; font-size:11px; color:#94A3B8;">
             Tap to query device GPS sensor via browser API
         </div>
+        <div id="gps-confirm-box" style="margin-top:8px; display:none;"></div>
     </div>
     <script>
     function acquireGPS() {
         var btn = document.getElementById("gps-btn");
         var st = document.getElementById("gps-status");
+        var box = document.getElementById("gps-confirm-box");
         if (!navigator.geolocation) {
             st.innerHTML = "<span style='color:#EF4444'>Geolocation not supported by this browser</span>";
             return;
@@ -212,6 +214,8 @@ def render_mobile_courier_view():
                 var acc = pos.coords.accuracy.toFixed(1);
                 st.innerHTML = "<span style='color:#10B981; font-weight:700;'>GPS Locked: " + lat + ", " + lon + " (±" + acc + "m)</span>";
                 btn.innerText = "GPS Fix Acquired";
+                box.style.display = "block";
+                box.innerHTML = "<a href='?mode=courier&lat=" + lat + "&lon=" + lon + "' target='_top' style='display:inline-block; width:92%; background:#10B981; color:#0B0F17; font-weight:800; font-size:12px; padding:9px 12px; border-radius:6px; text-decoration:none;'>[CONFIRM GPS FIX: " + lat + ", " + lon + "]</a>";
                 try {
                     var u = new URL(window.parent.location.href);
                     u.searchParams.set("mode", "courier");
@@ -224,11 +228,21 @@ def render_mobile_courier_view():
                 btn.innerText = "Retry GPS Query";
                 st.innerHTML = "<span style='color:#F59E0B'>GPS prompt: " + err.message + "</span>";
             },
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
     </script>
-    """, height=85)
+    """, height=120)
+
+    with st.expander("Fine-Tune Exact GPS Coordinates", expanded=False):
+        c_lat, c_lon = st.columns(2)
+        with c_lat:
+            in_lat = st.number_input("Latitude", value=cur_lat, format="%.6f")
+        with c_lon:
+            in_lon = st.number_input("Longitude", value=cur_lon, format="%.6f")
+        if st.button("Apply Coordinates", use_container_width=True):
+            update_courier_telematics(in_lat, in_lon, label="Custom Hardware Fix")
+            st.rerun()
 
     # 3. LIVE PROOF-OF-DELIVERY (POD) PHOTO CAPTURE
     st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 10px 0 6px 0; text-transform:uppercase;'>2. Live Optical POD Verification:</div>", unsafe_allow_html=True)

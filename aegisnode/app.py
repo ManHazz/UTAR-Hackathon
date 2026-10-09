@@ -34,7 +34,7 @@ from aegisnode.ui.handset_simulator import render_courier_handset
 from aegisnode.ui.ledger_view import render_cryptographic_ledger
 
 from aegisnode.ui.mobile_view import render_mobile_courier_view
-from aegisnode.data.live_bridge import get_live_state, update_warden_state
+from aegisnode.data.live_bridge import get_live_state, update_warden_state, build_live_scenario_data
 
 # 1. Page Configuration (Strict enterprise styling)
 st.set_page_config(
@@ -135,43 +135,32 @@ with st.sidebar:
         st.session_state.mobile_mode_active = True
         st.rerun()
 
-    st.markdown("### **Incident Scenarios**")
-    
-    scenario_options = list(SCENARIO_KEYS.keys())
-    scenario_files = list(SCENARIO_KEYS.values())
-    current_idx = scenario_files.index(st.session_state.active_scenario_file) if st.session_state.active_scenario_file in scenario_files else 0
+    st.markdown("---")
+    st.markdown("#### **Active Courier Mission**")
+    st.write("**Consignment:** `#GDX-SHP-20261003-042`")
+    st.write("**Courier:** Ahmad Farhan (`CR-9042`)")
+    st.write("**Vehicle:** Honda EX5 (Motorcycle)")
+    st.write("**Cargo Value:** `RM 1,850.00` (iPhone 17 Pro)")
+    st.write("**Base Hub:** UTP Main Gate (Tronoh, Perak)")
+    st.write("**Delivery Target:** Chancellor Hall, UTP")
 
-    selected_label = st.selectbox(
-        "Select Live Incident Scenario:",
-        options=scenario_options,
-        index=current_idx,
-    )
-    if SCENARIO_KEYS[selected_label] != st.session_state.active_scenario_file:
-        select_scenario(SCENARIO_KEYS[selected_label])
-        st.rerun()
+    st.markdown("---")
+    st.markdown("#### **Handset Control Mode**")
+    st.caption("Demonstration is driven live via courier smartphone (?mode=courier).")
+
+    with st.expander("Offline Scenario Simulation", expanded=False):
+        st.caption("Optional override for non-mobile testing:")
+        scenario_options = list(SCENARIO_KEYS.keys())
+        scenario_files = list(SCENARIO_KEYS.values())
+        current_idx = scenario_files.index(st.session_state.active_scenario_file) if st.session_state.active_scenario_file in scenario_files else 0
+        selected_label = st.selectbox("Select Scenario:", options=scenario_options, index=current_idx)
+        if SCENARIO_KEYS[selected_label] != st.session_state.active_scenario_file:
+            select_scenario(SCENARIO_KEYS[selected_label])
+            st.rerun()
 
     run_sim = st.button("Run Telemetry Analysis", use_container_width=True, type="primary")
     animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=True, help="Simulates multi-agent scanning latency")
-
     st.session_state.show_handset = st.checkbox("Courier Handset Preview", value=st.session_state.show_handset)
-
-    st.markdown("---")
-    st.markdown("#### **Consignment Telemetry Target**")
-    scenario_data = load_scenario(st.session_state.active_scenario_file)
-
-    if "shipment_id" in scenario_data:
-        st.write(f"**Shipment ID:** `{scenario_data.get('shipment_id')}`")
-        st.write(f"**Courier:** {scenario_data.get('courier_name')} (`{scenario_data.get('courier_id')}`)")
-        st.write(f"**Vehicle:** {scenario_data.get('courier_vehicle')}")
-        st.write(f"**Cargo Value:** `RM {scenario_data.get('parcel_value_myr', 0):.2f}`")
-        st.write(f"**Category:** {scenario_data.get('parcel_category')}")
-        dest = scenario_data.get("expected_destination", {}).get("label", "Destination")
-        st.write(f"**Destination:** {dest}")
-    elif "subcontractor_id" in scenario_data:
-        st.write(f"**Partner ID:** `{scenario_data.get('subcontractor_id')}`")
-        st.write(f"**Source IP:** `{scenario_data.get('source_ip')}`")
-        st.write(f"**User Agent:** `{scenario_data.get('user_agent')}`")
-        st.write(f"**Attack Vector:** Out-of-hours API Manifest Scraping")
 
 # --- MAIN DASHBOARD HEADER ---
 shield_head_svg = get_svg_icon("shield", color="#38BDF8", size=22)
@@ -190,57 +179,17 @@ render_html(f"""
 </div>
 """)
 
-# --- 1-CLICK ACTIVE INCIDENT TRIAGE QUEUE ---
+# --- ACTIVE FIELD TELEMATICS CONSOLE ---
 render_html("""
 <div class="panel-header">
-    <span>Active Incident Queue</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+        <span>Live Courier Telematics Stream (Driver Edge Terminal Monitor)</span>
+        <span style="font-size:10px; font-weight:800; background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:4px; font-family:monospace;">
+            EDGE LINK CONNECTED
+        </span>
+    </div>
 </div>
 """)
-
-col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-with col_s1:
-    is_active = (st.session_state.active_scenario_file == "fraud_gps_spoof.json")
-    if st.button(
-        "INC-042 | GPS Teleport" + (" *" if is_active else ""),
-        use_container_width=True,
-        type="primary" if is_active else "secondary",
-        help="Simulate Phantom Courier mock location jump"
-    ):
-        select_scenario("fraud_gps_spoof.json")
-        st.rerun()
-
-with col_s2:
-    is_active = (st.session_state.active_scenario_file == "normal_delivery.json")
-    if st.button(
-        "INC-081 | Clean Courier" + (" *" if is_active else ""),
-        use_container_width=True,
-        type="primary" if is_active else "secondary",
-        help="Simulate legitimate delivery route"
-    ):
-        select_scenario("normal_delivery.json")
-        st.rerun()
-
-with col_s3:
-    is_active = (st.session_state.active_scenario_file == "fraud_pod_spoof.json")
-    if st.button(
-        "INC-109 | POD Forgery" + (" *" if is_active else ""),
-        use_container_width=True,
-        type="primary" if is_active else "secondary",
-        help="Simulate car floor mat / screenshot POD forgery"
-    ):
-        select_scenario("fraud_pod_spoof.json")
-        st.rerun()
-
-with col_s4:
-    is_active = (st.session_state.active_scenario_file == "fraud_api_scraping.json")
-    if st.button(
-        "SEC-304 | API Scraping" + (" *" if is_active else ""),
-        use_container_width=True,
-        type="primary" if is_active else "secondary",
-        help="Simulate 03:00 AM bulk PII scraping"
-    ):
-        select_scenario("fraud_api_scraping.json")
-        st.rerun()
 
 # Real-Time Mobile Bridge Synchronizer (Crash-Proof, Zero Race Conditions)
 bridge_state = get_live_state()
@@ -281,8 +230,8 @@ with col_br2:
     if st.button("Sync Handset Feed", use_container_width=True, help="Synchronize telemetry state with courier smartphone"):
         st.rerun()
 
-# Run Orchestrator Pipeline
-scenario_data = load_scenario(st.session_state.active_scenario_file)
+# Run Orchestrator Pipeline on Live Telematics Mission
+scenario_data = build_live_scenario_data(bridge_state)
 result = st.session_state.orchestrator.process_shipment(scenario_data)
 
 sentinel = result["sentinel"]
@@ -291,13 +240,13 @@ warden = result["warden"]
 ledger_status = result["ledger_status"]
 
 # If OTP was cleared by user interaction for the Step-Up scenario, update warden state
-if st.session_state.otp_cleared and st.session_state.active_scenario_file == "fraud_pod_spoof.json":
+if (st.session_state.otp_cleared or bridge_state.get("otp_verified")) and bridge_state.get("courier_action") in ("TRIGGER_POD_FORGERY", "SUBMIT_OTP"):
     warden = dict(warden)
     warden["action"] = "AUTO_CLEAR"
     warden["banner_title"] = "Consignment Released via Verified Recipient OTP"
     warden["message"] = "Customer verified physical receipt via 6-digit cryptographic challenge. Consignment handed over and driver payout released."
     warden["actions_taken"] = [
-        "Interactive OTP code verified against recipient session",
+        "Interactive OTP code 849201 verified against recipient session",
         "Warden release latch unsealed",
         "Driver commission RM 4.50 cleared for batch settlement",
         "Cryptographic ledger state updated"
@@ -309,7 +258,7 @@ update_warden_state(
     trust_score=int(investigator.get("trust_score", 100)),
     velocity=float(sentinel.get("highest_velocity_kmh", 0.0)),
     message=warden.get("message", "Telemetry nominal."),
-    otp_verified=st.session_state.otp_cleared
+    otp_verified=st.session_state.otp_cleared or bridge_state.get("otp_verified", False)
 )
 
 # Latency Mode Simulation
@@ -323,61 +272,48 @@ if run_sim and animate_pitch and sentinel.get("anomalies_detected", False):
 is_api_scenario = "subcontractor_id" in scenario_data
 warden_act = warden.get("action", "AUTO_CLEAR")
 
-if st.session_state.active_scenario_file == "fraud_gps_spoof.json":
+courier_act = bridge_state.get("courier_action", "STANDBY")
+live_spd = bridge_state.get("highest_velocity_kmh", float(sentinel.get("highest_velocity_kmh", 32.0)))
+live_dist = bridge_state.get("spoof_distance_km", 185.3)
+origin_lbl = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")
+dest_lbl = bridge_state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
+has_live_photo = bridge_state.get("has_live_photo", False)
+live_photo_stat = bridge_state.get("live_photo_status", "VALID")
+live_var = bridge_state.get("live_photo_variance", 72.4)
+
+if courier_act == "TRIGGER_GPS_SPOOF":
     brief_tag = "INC-042"
     brief_title = "GPS Teleportation Spoofing (Phantom Courier)"
     brief_status = "QUARANTINE / DELIVERY FROZEN"
     status_class = "status-freeze"
-    target_id = f"#{scenario_data.get('shipment_id', 'GDX-94021')}"
+    target_id = f"#{scenario_data.get('shipment_id', 'GDX-SHP-20261003-042')}"
     subject_label = f"{scenario_data.get('courier_name', 'Ahmad Farhan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
-    
-    # Check if triggered by live courier phone
-    live_spd = bridge_state.get("highest_velocity_kmh", 458.0)
-    live_dist = bridge_state.get("spoof_distance_km", 38.0)
-    origin_lbl = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")
-    dest_lbl = bridge_state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
-
     telemetry_fact = f"Peak Speed: {live_spd:.0f} km/h (Physically Impossible)"
-    cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 4200):.2f}"
+    cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 1850):.2f}"
     summary_text = (
         f"Courier telematics recorded a {live_dist:.1f} km coordinate leap from {origin_lbl} to {dest_lbl} "
-        f"in under 2.0 minutes ({live_spd:.0f} km/h). Real physical road transit requires a minimum of 34 minutes via OSRM. "
+        f"in under 2.0 minutes ({live_spd:.0f} km/h). Real physical road transit requires a minimum of 145 minutes via OSRM. "
         f"Autonomous delivery hold executed by Warden."
     )
-elif st.session_state.active_scenario_file == "normal_delivery.json":
-    brief_tag = "INC-081"
-    brief_title = "Legitimate Courier Delivery Route"
-    brief_status = "VERIFIED / NOMINAL CLEAR"
-    status_class = "status-clear"
-    target_id = f"#{scenario_data.get('shipment_id', 'GDX-10842')}"
-    subject_label = f"{scenario_data.get('courier_name', 'Siti Nurhaliza')} ({scenario_data.get('courier_vehicle', 'Van')})"
-    telemetry_fact = f"Average Speed: {sentinel.get('highest_velocity_kmh', 32):.0f} km/h (Nominal City Route)"
-    cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 180):.2f}"
-    summary_text = "All 6 telematics pings align with expected OpenStreetMap road kinematics and verified cell tower handoffs. Zero anomaly detected. Delivery cleared for customer handover."
-elif st.session_state.active_scenario_file == "fraud_pod_spoof.json":
+elif courier_act == "TRIGGER_POD_FORGERY" or (has_live_photo and live_photo_stat == "FORGED"):
     brief_tag = "INC-109"
     brief_title = "Optical Proof-of-Delivery (POD) Forgery Attack"
-    if st.session_state.otp_cleared:
+    if st.session_state.otp_cleared or bridge_state.get("otp_verified"):
         brief_status = "CHALLENGE RESOLVED / APPROVED"
         status_class = "status-clear"
     else:
         brief_status = "STEP-UP CHALLENGE / OTP REQUIRED"
         status_class = "status-otp"
-    target_id = f"#{scenario_data.get('shipment_id', 'GDX-77192')}"
-    subject_label = f"{scenario_data.get('courier_name', 'Kevin Tan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
-    
-    if bridge_state.get("has_live_photo"):
-        live_var = bridge_state.get("live_photo_variance", 14.2)
-        telemetry_fact = f"Live Phone Laplacian Variance: {live_var:.1f} (Threshold: 55.0)"
-        summary_text = (
-            f"Courier uploaded live camera capture from smartphone. Optical texture analysis ({live_var:.1f}) "
-            f"failed physical edge variance threshold (55.0). Autonomous Warden suspended payout and dispatched "
-            f"an SMS OTP challenge to customer Sarah Lim."
-        )
-    else:
-        telemetry_fact = "Laplacian Edge Variance: 14.2 (Threshold: 55.0)"
-        summary_text = "Driver uploaded a darkened interior photo of a car floor mat to simulate parcel handover. Kinetic route was nominal, but proof-of-delivery failed optical edge variance heuristic. Autonomous Warden suspended payout and dispatched an SMS OTP challenge to the customer."
-else:  # fraud_api_scraping.json
+    target_id = f"#{scenario_data.get('shipment_id', 'GDX-SHP-20261003-042')}"
+    subject_label = f"{scenario_data.get('courier_name', 'Ahmad Farhan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
+    telemetry_fact = f"Live Phone Laplacian Variance: {live_var:.1f} (Threshold: 55.0)"
+    cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 1850):.2f}"
+    summary_text = (
+        f"Courier uploaded live camera capture from smartphone. Optical texture analysis ({live_var:.1f}) "
+        f"failed physical edge variance threshold (55.0). Autonomous Warden suspended payout and dispatched "
+        f"an SMS OTP challenge to recipient Sarah Lim."
+    )
+elif courier_act == "TRIGGER_API_HARVEST":
     brief_tag = "SEC-304"
     brief_title = "Out-of-Hours Subcontractor API Harvesting"
     brief_status = "CONTAINMENT / CREDENTIAL REVOKED"
@@ -387,6 +323,16 @@ else:  # fraud_api_scraping.json
     telemetry_fact = "Rate: 520 req/min at 03:00 AM (Baseline: 60/min)"
     cargo_fact = "12,500 Customer PII Records"
     summary_text = "Subcontractor API credentials were used from an anonymous VPN/Tor node at 03:00 AM to exfiltrate bulk delivery manifests at 8.6x normal limits. Warden automatically revoked the API bearer token and blacklisted the IP at the perimeter WAF."
+else:
+    brief_tag = "INC-081"
+    brief_title = "Legitimate Courier Delivery Route"
+    brief_status = "VERIFIED / NOMINAL CLEAR"
+    status_class = "status-clear"
+    target_id = f"#{scenario_data.get('shipment_id', 'GDX-SHP-20261003-042')}"
+    subject_label = f"{scenario_data.get('courier_name', 'Ahmad Farhan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
+    telemetry_fact = f"Average Speed: {live_spd:.0f} km/h (Nominal Campus Speed Limit)"
+    cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 1850):.2f}"
+    summary_text = "All 4 telematics checkpoints align with OpenStreetMap road kinematics on UTP campus roads and verified cell tower handoffs. Zero anomaly detected. Delivery cleared for customer handover."
 
 render_html(f"""
 <div class="incident-briefing">

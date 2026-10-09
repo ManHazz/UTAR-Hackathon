@@ -300,3 +300,155 @@ def reset_live_state():
     global _MEMORY_STATE
     _MEMORY_STATE = dict(DEFAULT_STATE)
     _save_state(DEFAULT_STATE)
+
+def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Constructs a live scenario dictionary for Sentinel, Investigator, Warden,
+    and Map visualizers based on the courier smartphone's actual telematics and actions.
+    Traces exact road waypoints centered at UTP Campus (Tronoh, Perak).
+    """
+    if state is None:
+        state = get_live_state()
+
+    courier_action = state.get("courier_action", "STANDBY")
+
+    # If API harvesting attack simulated
+    if courier_action == "TRIGGER_API_HARVEST":
+        data_dir = Path(__file__).resolve().parent
+        api_path = data_dir / "fraud_api_scraping.json"
+        if api_path.exists():
+            with open(api_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+    cur_lat = state.get("courier_lat", 4.385200)
+    cur_lon = state.get("courier_lon", 100.978100)
+    cur_label = state.get("courier_location_label", "UTP Campus, Tronoh, Perak")
+    otp_cleared = state.get("otp_verified", False)
+    has_photo = state.get("has_live_photo", False)
+    photo_status = state.get("live_photo_status", "VALID")
+    photo_var = state.get("live_photo_variance", 72.4)
+
+    scenario_dict = {
+        "scenario_id": "SCN-LIVE-FIELD-01",
+        "shipment_id": "GDX-SHP-20261003-042",
+        "courier_id": "CR-9042",
+        "courier_name": "Ahmad Farhan",
+        "courier_vehicle": "Honda EX5 (Motorcycle)",
+        "parcel_value_myr": 1850.00,
+        "parcel_category": "High-Value Consumer Electronics (iPhone 17 Pro)",
+        "expected_destination": {
+            "lat": 4.383500,
+            "lon": 100.972000,
+            "label": "Chancellor Hall, UTP Campus"
+        },
+        "geofence_center": {
+            "lat": 4.383500,
+            "lon": 100.972000,
+            "radius_meters": 150
+        }
+    }
+
+    # Physical road checkpoints around UTP Perak
+    events = [
+        {
+            "sequence": 1,
+            "timestamp": "2026-10-09T14:10:00",
+            "event_type": "TRANSIT_PING",
+            "location": {
+                "lat": 4.388500,
+                "lon": 100.967500,
+                "label": "UTP Main Gate Checkpoint (Tronoh)"
+            },
+            "speed_kmh": 28.0,
+            "cell_tower_id": "TWR-UTP-01"
+        },
+        {
+            "sequence": 2,
+            "timestamp": "2026-10-09T14:14:00",
+            "event_type": "TRANSIT_PING",
+            "location": {
+                "lat": 4.386200,
+                "lon": 100.971200,
+                "label": "UTP Oval Park / Information Center"
+            },
+            "speed_kmh": 32.0,
+            "cell_tower_id": "TWR-UTP-01"
+        },
+        {
+            "sequence": 3,
+            "timestamp": "2026-10-09T14:18:00",
+            "event_type": "TRANSIT_PING",
+            "location": {
+                "lat": cur_lat,
+                "lon": cur_lon,
+                "label": f"Courier Fix: {cur_label}"
+            },
+            "speed_kmh": 30.0,
+            "cell_tower_id": "TWR-UTP-01"
+        }
+    ]
+
+    if courier_action == "TRIGGER_GPS_SPOOF":
+        # Coordinate jump across Malaysia to Menara PJX in 2.0 minutes
+        target_lat = state.get("spoof_target_lat", 3.103200)
+        target_lon = state.get("spoof_target_lon", 101.644500)
+        target_label = state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
+        spd = state.get("highest_velocity_kmh", 5559.0)
+        events.append({
+            "sequence": 4,
+            "timestamp": "2026-10-09T14:20:00",
+            "event_type": "TRANSIT_PING",
+            "location": {
+                "lat": target_lat,
+                "lon": target_lon,
+                "label": f"Spoofed Destination: {target_label}"
+            },
+            "speed_kmh": spd,
+            "cell_tower_id": "TWR-UTP-01"
+        })
+    elif courier_action in ("TRIGGER_POD_FORGERY", "TRIGGER_NORMAL_DELIVERY", "SUBMIT_OTP") or has_photo:
+        pod_stat = "FORGED" if (courier_action == "TRIGGER_POD_FORGERY" or photo_status == "FORGED") else "VALID"
+        events.append({
+            "sequence": 4,
+            "timestamp": "2026-10-09T14:24:00",
+            "event_type": "DELIVERY_ATTEMPT",
+            "location": {
+                "lat": 4.383500,
+                "lon": 100.972000,
+                "label": "UTP Chancellor Hall Delivery Zone"
+            },
+            "speed_kmh": 0.0,
+            "cell_tower_id": "TWR-UTP-02",
+            "pod_evidence": {
+                "photo_status": pod_stat,
+                "vision_anomaly_score": 0.92 if pod_stat == "FORGED" else 0.04,
+                "exif_camera_model": "Phone Camera (Live Hardware Stream)",
+                "exif_timestamp_match": True,
+                "otp_verified": otp_cleared,
+                "optical_variance": photo_var
+            }
+        })
+    else:
+        events.append({
+            "sequence": 4,
+            "timestamp": "2026-10-09T14:24:00",
+            "event_type": "DELIVERY_ATTEMPT",
+            "location": {
+                "lat": 4.383500,
+                "lon": 100.972000,
+                "label": "UTP Chancellor Hall Delivery Zone"
+            },
+            "speed_kmh": 0.0,
+            "cell_tower_id": "TWR-UTP-02",
+            "pod_evidence": {
+                "photo_status": "VALID",
+                "vision_anomaly_score": 0.04,
+                "exif_camera_model": "Phone Camera",
+                "exif_timestamp_match": True,
+                "otp_verified": otp_cleared,
+                "optical_variance": photo_var
+            }
+        })
+
+    scenario_dict["events"] = events
+    return scenario_dict
