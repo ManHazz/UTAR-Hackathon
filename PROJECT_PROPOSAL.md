@@ -286,7 +286,46 @@ AegisNode rejects monolithic processing in favor of **four specialized, cooperat
   * Generates SHA-256 block digests ($H_n = \text{SHA256}(H_{n-1} \,\|\, M_n)$) to ensure tamper-evidence.
   * Provides non-repudiation JSON export for dispute resolution and external compliance auditing.
 
-#### 3.2.5 Multi-Agent Handoff & Consensus Workflow
+* **Cryptographic Chain Verification Function $V(C)$:**  
+  To verify ledger integrity, external security auditors execute an iterative validation function over the chain $C = [B_0, B_1, \dots, B_N]$:
+  $$\forall i \in [1, N]: \quad (B_i.\text{prev\_hash} == B_{i-1}.\text{block\_hash}) \quad \land \quad (B_i.\text{block\_hash} == \text{SHA256}(B_i.\text{payload} \,\|\, B_i.\text{prev\_hash}))$$
+  If any block $B_k$ fails either equality condition, the ledger immediately flags tampering at index $k$ and invalidates the audit proof.
+
+#### 3.2.5 Inter-Agent Communication Schema (JSON Data Contracts)
+Communication between agents is strictly decoupled using standardized JSON schema payloads:
+1. **Sentinel $\rightarrow$ Investigator Contract:**
+   ```json
+   {
+     "shipment_id": "GDX-9042",
+     "courier_id": "DRV-4402",
+     "anomaly_flag": true,
+     "primary_trigger": "MOCK_LOCATION_SPOOF",
+     "highest_velocity_kmh": 450.0,
+     "cell_tower_locked": true
+   }
+   ```
+2. **Investigator $\rightarrow$ Warden Contract:**
+   ```json
+   {
+     "shipment_id": "GDX-9042",
+     "trust_score": 18,
+     "risk_level": "CRITICAL",
+     "penalties": {
+       "kinematic_violation": 60,
+       "telematics_spoof": 35,
+       "pod_forgery": 0,
+       "cargo_multiplier": 1.35
+     },
+     "forensic_narrative": "Kinematic violation: 15 km in 2 min (450 km/h) while cell tower stayed locked."
+   }
+   ```
+
+#### 3.2.6 Deterministic Fail-Safe Fallback Strategy
+To maintain continuous operation when external services encounter network latency or downtime:
+* **OSRM Routing Engine Fallback:** If the public OSRM service times out ($>3.0\text{ s}$), the system automatically queries an in-memory route cache for pre-calculated Klang Valley segments.
+* **Physics Estimation Fallback:** If the query is not cached, the engine falls back to straight-line Haversine distance adjusted by an empirical urban road tortuosity factor ($1.35 \times d_{\text{haversine}}$) and a baseline urban transit velocity ($35\text{ km/h}$). Verification never blocks courier operations due to third-party API downtime.
+
+#### 3.2.7 Multi-Agent Handoff & Consensus Workflow
 ```
 [Raw Event] ──► Sentinel (18ms)
                    │
@@ -321,6 +360,17 @@ The ratio of actual elapsed travel time to the minimum route duration computed b
 $$R_{\text{feasibility}} = \frac{\Delta t_{\text{actual}}}{\Delta t_{\text{OSRM}}}$$
 When $R_{\text{feasibility}} < 0.25$ (indicating transit completed in less than a quarter of the minimum driving duration), a high-severity kinematic penalty (-60 points) is assessed.
 
+#### 3. Cargo Value Risk Multiplier & Operational Loss Mitigation
+To safeguard high-risk cargo while minimizing driver friction on low-value items, the Investigator Agent applies a tiered risk scaling multiplier:
+
+| Consignment Category | Cargo Value Threshold | Risk Multiplier ($M$) | Operational Enforcement Impact |
+| :--- | :---: | :---: | :--- |
+| **Standard Documents & Low-Value** | $\le \text{RM } 100$ | $1.00\times$ | Standard deductions; high tolerance for minor traffic delays. |
+| **General Merchandise** | $\text{RM } 101 - \text{RM } 1,000$ | $1.15\times$ | Moderate sensitivity; flags require standard POD verification. |
+| **High-Value Consumer Tech** | $> \text{RM } 1,000$ | $1.35\times$ | High-sensitivity scaling; minor anomalies push score to Step-Up Challenge. |
+
+$$\text{Final Trust Score} = \max\Big(0, 100 - \sum \text{Penalties} \times M\Big)$$
+
 ### 3.4 Threat Simulation Scenarios
 
 | Scenario | Incident Classification | Primary MITRE ATT&CK Technique | Warden Policy Output |
@@ -349,6 +399,18 @@ A functional simulation dashboard was developed to evaluate the multi-agent pipe
 * **Explainable Deduction Matrix:** Displays an itemized breakdown of deductions leading to the final Zero-Trust score.
 * **Interactive Step-Up Challenge Gate:** Simulates customer OTP verification, transitioning the system from a security hold to verified release.
 * **Courier Terminal Emulation:** Reflects driver handset state transitions (Verified, Security Challenge, or Terminal Locked).
+
+#### Table 4.1: Controlled Testbed Experimental Simulation Parameters
+
+| Experimental Parameter | Configured Value / Specification | Description & Rationale |
+| :--- | :--- | :--- |
+| **Geographic Bounding Box** | $3.0450^\circ\text{N} - 3.1320^\circ\text{N}$, $101.5200^\circ\text{E} - 101.6710^\circ\text{E}$ | Urban transit corridor across Shah Alam, Petaling Jaya, Subang, and Bangsar. |
+| **Waypoints per Consignment** | $5 - 12\text{ telematics pings}$ | Simulates start-of-route, transit checkpoints, geofence approach, and drop-off. |
+| **Ping Ingestion Interval** | $120\text{ s} - 900\text{ s}$ | Reflects realistic commercial driver background sampling rates. |
+| **Urban Speed Anomaly Threshold**| $120\text{ km/h}$ | Maximum realistic speed for urban highway transit (Federal Highway/KESAS). |
+| **OSRM Feasibility Lower Bound** | $R_{\text{feasibility}} < 0.25$ | Detects travel completed in $<25\%$ of physical driving duration. |
+| **Testbed Runtime Platform** | Intel Core / AMD64 workstation, Python 3.10+ | Local simulation testbed for deterministic latency benchmarking. |
+
 
 ### 4.2 Benchmarking Framework & Simulation Outcomes
 Within the local simulation testbed, agent pipeline performance was benchmarked across simulated incident streams:
