@@ -187,20 +187,43 @@ def create_api_scraping_attack() -> dict:
         "scenario_name": "Subcontractor API Credential Abuse / Data Exfiltration",
         "threat_level": "CRITICAL",
         "subcontractor_id": "SUB-PARTNER-KLANG-LOGISYNC",
+        "courier_name": "LogiSync Partner Fleet #4",
+        "courier_vehicle": "Hino 300 Series (BQU 1920)",
         "api_key_prefix": "gdx_live_sub_892f...",
         "source_ip": "185.220.101.44",  # Known offshore VPN/Tor exit
         "user_agent": "python-requests/2.31.0",
         "events": [
             {
                 "sequence": 1,
-                "timestamp": (t0).isoformat(),
+                "timestamp": (t0 - timedelta(minutes=14)).isoformat(),
+                "event_type": "DEPOT_STATIONARY",
+                "location": {"lat": 3.0333, "lon": 101.4450, "label": "GDEX Klang Partner Terminal (Stationary Fleet)"},
+                "speed_kmh": 0,
+                "battery_pct": 100,
+                "cell_tower_id": "MY-DIGI-4190-KLG",
                 "endpoint": "/api/v2/manifests/batch-export",
                 "request_count_per_minute": 520,
                 "standard_rate_limit": 60,
                 "hour_of_day": 3,
                 "records_requested": 12500,
                 "payload_sensitivity": "Customer Phone, Delivery Address, PII",
-                "note": "Out-of-hours bulk manifest exfiltration detected"
+                "note": "Fleet stationary in depot while API harvested from external Tor node"
+            },
+            {
+                "sequence": 2,
+                "timestamp": (t0).isoformat(),
+                "event_type": "LOGISTICS_CORRIDOR",
+                "location": {"lat": 3.0010, "lon": 101.3980, "label": "Port Klang Container Hub (Authorized Sector)"},
+                "speed_kmh": 0,
+                "battery_pct": 98,
+                "cell_tower_id": "MY-DIGI-4190-KLG",
+                "endpoint": "/api/v2/manifests/batch-export",
+                "request_count_per_minute": 520,
+                "standard_rate_limit": 60,
+                "hour_of_day": 3,
+                "records_requested": 12500,
+                "payload_sensitivity": "Customer Phone, Delivery Address, PII",
+                "note": "Out-of-hours bulk manifest exfiltration detected; credentials revoked at gateway"
             }
         ]
     }

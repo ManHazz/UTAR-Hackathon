@@ -11,24 +11,33 @@ from typing import Tuple, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
-# Pre-baked travel metrics for GDEX demonstration routes (Shah Alam <-> PJ / Klang Valley)
-# Ensures 100% demo reliability even if the presentation room has spotty Wi-Fi
-PREBAKED_ROUTES = {
-    # Shah Alam Central Hub to PJ SS2 (approx 14.8 km driving, ~24 mins)
-    "3.0738,101.5385->3.1186,101.6214": {"distance_km": 14.8, "duration_seconds": 1440},
-    # Shah Alam Section 23 Industrial to Menara PJX (approx 15.2 km driving, ~26 mins)
-    "3.0450,101.5200->3.1032,101.6445": {"distance_km": 15.2, "duration_seconds": 1560},
-    # Hub to Federal Highway Batu Tiga (~5.5 km, ~8 mins)
-    "3.0738,101.5385->3.0912,101.5794": {"distance_km": 5.5, "duration_seconds": 480},
-    # Batu Tiga to Kelana Jaya (~6.8 km, ~12 mins)
-    "3.0912,101.5794->3.1070,101.6030": {"distance_km": 6.8, "duration_seconds": 720},
-    # Kelana Jaya to PJ SS2 (~3.2 km, ~7 mins)
-    "3.1070,101.6030->3.1186,101.6214": {"distance_km": 3.2, "duration_seconds": 420},
-    # Bangsar Approach to Bangsar Residence (~1.8 km, ~4 mins)
-    "3.1250,101.6620->3.1319,101.6705": {"distance_km": 1.8, "duration_seconds": 240},
-    # Central Hub to Section 23 Industrial (~3.8 km, ~6 mins)
-    "3.0738,101.5385->3.0450,101.5200": {"distance_km": 3.8, "duration_seconds": 360},
-}
+import json
+from pathlib import Path
+
+# Load high-resolution OSRM road graph curves for demonstration routes
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+ROUTES_FILE = DATA_DIR / "prebaked_routes.json"
+
+PREBAKED_ROUTES: Dict[str, Dict[str, Any]] = {}
+if ROUTES_FILE.exists():
+    try:
+        with open(ROUTES_FILE, "r", encoding="utf-8") as f:
+            PREBAKED_ROUTES = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load prebaked_routes.json: {e}")
+
+# Fallback minimal dictionary in case file is absent
+if not PREBAKED_ROUTES:
+    PREBAKED_ROUTES = {
+        "3.0738,101.5385->3.1186,101.6214": {"distance_km": 14.55, "duration_seconds": 1115, "geometry": []},
+        "3.0450,101.5200->3.1032,101.6445": {"distance_km": 19.59, "duration_seconds": 1327, "geometry": []},
+        "3.0738,101.5385->3.0912,101.5794": {"distance_km": 7.85, "duration_seconds": 612, "geometry": []},
+        "3.0912,101.5794->3.1070,101.6030": {"distance_km": 7.84, "duration_seconds": 603, "geometry": []},
+        "3.1070,101.6030->3.1186,101.6214": {"distance_km": 3.94, "duration_seconds": 377, "geometry": []},
+        "3.1250,101.6620->3.1319,101.6705": {"distance_km": 4.99, "duration_seconds": 459, "geometry": []},
+        "3.0738,101.5385->3.0450,101.5200": {"distance_km": 7.51, "duration_seconds": 607, "geometry": []},
+        "3.0333,101.4450->3.0010,101.3980": {"distance_km": 7.05, "duration_seconds": 496, "geometry": []},
+    }
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates great-circle distance between two GPS coordinates in kilometers."""
@@ -65,11 +74,14 @@ def check_route_feasibility(
     # 1. Check Pre-baked Cache for Instant Zero-Latency Reliability
     if route_key in PREBAKED_ROUTES:
         cached = PREBAKED_ROUTES[route_key]
+        geom = cached.get("geometry", [])
+        if not geom or len(geom) < 2:
+            geom = [[lat1, lon1], [lat2, lon2]]
         res = {
             "distance_km": cached["distance_km"],
             "duration_seconds": cached["duration_seconds"],
             "duration_minutes": round(cached["duration_seconds"] / 60.0, 1),
-            "geometry": [[lat1, lon1], [lat2, lon2]],
+            "geometry": geom,
             "source": "PREBAKED_CACHE"
         }
         _ROUTE_CACHE[route_key] = res

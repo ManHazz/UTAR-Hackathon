@@ -377,6 +377,13 @@ with tab_evidence:
     else:
         render_html("""
         <div class="panel-header">
+            <span>Physical Depot Sector & Subcontractor Corridor</span>
+        </div>
+        """)
+        render_interactive_map(scenario_data, True, height=340)
+
+        render_html("""
+        <div class="panel-header" style="margin-top:14px;">
             <span>Cyber Threat Radar: Out-of-Hours API Harvest</span>
         </div>
         """)
