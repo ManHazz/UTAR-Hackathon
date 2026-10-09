@@ -148,15 +148,6 @@ with st.sidebar:
     st.markdown("#### **Handset Control Mode**")
     st.caption("Demonstration is driven live via courier smartphone (?mode=courier).")
 
-    with st.expander("Offline Scenario Simulation", expanded=False):
-        st.caption("Optional override for non-mobile testing:")
-        scenario_options = list(SCENARIO_KEYS.keys())
-        scenario_files = list(SCENARIO_KEYS.values())
-        current_idx = scenario_files.index(st.session_state.active_scenario_file) if st.session_state.active_scenario_file in scenario_files else 0
-        selected_label = st.selectbox("Select Scenario:", options=scenario_options, index=current_idx)
-        if SCENARIO_KEYS[selected_label] != st.session_state.active_scenario_file:
-            select_scenario(SCENARIO_KEYS[selected_label])
-            st.rerun()
 
     run_sim = st.button("Run Telemetry Analysis", use_container_width=True, type="primary")
     animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=True, help="Simulates multi-agent scanning latency")

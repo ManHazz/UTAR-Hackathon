@@ -13,6 +13,8 @@ from aegisnode.data.live_bridge import (
     get_live_state,
     update_courier_action,
     update_courier_telematics,
+    add_route_waypoint,
+    clear_route_history,
     trigger_gps_spoof,
     process_uploaded_pod_photo,
     reset_live_state,
@@ -160,30 +162,57 @@ def render_mobile_courier_view():
     # 2. HARDWARE TELEMATICS & GPS POSITION SENSOR
     st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 12px 0 6px 0; text-transform:uppercase;'>1. Phone Hardware GPS Telematics:</div>", unsafe_allow_html=True)
     
+    route_history = state.get("route_history", [])
+    history_count = len(route_history)
+
     st.markdown(f"""
     <div style="background:#111827; border:1px solid #1F2937; border-radius:10px; padding:12px; margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <span style="font-size:11px; color:#94A3B8;">CURRENT POSITION:</span>
             <span class="coord-pill">{cur_lat:.5f} N, {cur_lon:.5f} E</span>
         </div>
-        <div style="font-size:12px; font-weight:600; color:#F8FAFC; margin-bottom:8px;">
+        <div style="font-size:12px; font-weight:600; color:#F8FAFC; margin-bottom:6px;">
             {cur_label}
         </div>
-        <div style="font-size:10px; color:#64748B;">
-            Hardware baseband: Locked to Cellular Tower #TWR-4921 (Perak)
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:#38BDF8; font-family:monospace;">
+            <span>Recorded Route: <b>{history_count} checkpoints</b></span>
+            <span style="color:#10B981;">Tower #TWR-UTP-01</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Fast 1-click Preset Coordinates
-    col_pos1, col_pos2 = st.columns(2)
-    with col_pos1:
-        if st.button("[LOC] Set: UTP Campus", use_container_width=True, help="Set coordinates to UTP Perak (4.3852, 100.9781)"):
-            update_courier_telematics(4.385200, 100.978100, label="UTP Campus (Tronoh, Perak)")
+    # 1-Click Campus Waypoints for tracing real route around UTP
+    st.markdown("<div style='font-size:10px; font-weight:700; color:#94A3B8; margin-bottom:4px; text-transform:uppercase;'>UTP Campus Waypoints (1-Tap Trace):</div>", unsafe_allow_html=True)
+    col_w1, col_w2 = st.columns(2)
+    with col_w1:
+        if st.button("[+] UTP Main Gate", use_container_width=True, help="Add UTP Main Gate to route"):
+            add_route_waypoint(4.388500, 100.967500, "UTP Main Gate Checkpoint (Tronoh)", speed_kmh=28.0)
             st.rerun()
-    with col_pos2:
-        if st.button("[LOC] Set: Shah Alam Hub", use_container_width=True, help="Set coordinates to Shah Alam Hub (3.0560, 101.5320)"):
-            update_courier_telematics(3.056000, 101.532000, label="Shah Alam Section 23 Hub")
+        if st.button("[+] Chancellor Hall", use_container_width=True, help="Add Chancellor Hall to route"):
+            add_route_waypoint(4.383500, 100.972000, "UTP Chancellor Hall Delivery Zone", speed_kmh=25.0)
+            st.rerun()
+        if st.button("[+] Pocket D (CS)", use_container_width=True, help="Add Pocket D to route"):
+            add_route_waypoint(4.381800, 100.974500, "UTP Pocket D / Computer Science", speed_kmh=30.0)
+            st.rerun()
+    with col_w2:
+        if st.button("[+] Oval Park", use_container_width=True, help="Add Oval Park to route"):
+            add_route_waypoint(4.386200, 100.971200, "UTP Oval Park / Info Center", speed_kmh=32.0)
+            st.rerun()
+        if st.button("[+] IRC Main Library", use_container_width=True, help="Add IRC Library to route"):
+            add_route_waypoint(4.384600, 100.970200, "UTP IRC Main Library", speed_kmh=25.0)
+            st.rerun()
+        if st.button("[+] Village 4", use_container_width=True, help="Add Village 4 to route"):
+            add_route_waypoint(4.387200, 100.976800, "UTP Village 4 Residential", speed_kmh=28.0)
+            st.rerun()
+
+    col_act1, col_act2 = st.columns(2)
+    with col_act1:
+        if st.button("[+] Log Current Fix", use_container_width=True, help="Log current GPS position as route checkpoint"):
+            add_route_waypoint(cur_lat, cur_lon, f"Fix #{history_count+1}: {cur_label}", speed_kmh=30.0)
+            st.rerun()
+    with col_act2:
+        if st.button("Reset Route Path", use_container_width=True, help="Clear breadcrumbs and start route fresh"):
+            clear_route_history()
             st.rerun()
 
     # Browser Geolocation JS Widget for real GPS acquisition
@@ -215,7 +244,7 @@ def render_mobile_courier_view():
                 st.innerHTML = "<span style='color:#10B981; font-weight:700;'>GPS Locked: " + lat + ", " + lon + " (±" + acc + "m)</span>";
                 btn.innerText = "GPS Fix Acquired";
                 box.style.display = "block";
-                box.innerHTML = "<a href='?mode=courier&lat=" + lat + "&lon=" + lon + "' target='_top' style='display:inline-block; width:92%; background:#10B981; color:#0B0F17; font-weight:800; font-size:12px; padding:9px 12px; border-radius:6px; text-decoration:none;'>[CONFIRM GPS FIX: " + lat + ", " + lon + "]</a>";
+                box.innerHTML = "<a href='?mode=courier&lat=" + lat + "&lon=" + lon + "' target='_top' style='display:block; width:100%; background:#10B981; color:#0B0F17; font-weight:800; font-size:12px; padding:10px 12px; border-radius:6px; text-decoration:none;'>[TAP TO LOCK YOUR LIVE GPS: " + lat + ", " + lon + "]</a>";
                 try {
                     var u = new URL(window.parent.location.href);
                     u.searchParams.set("mode", "courier");
@@ -232,7 +261,7 @@ def render_mobile_courier_view():
         );
     }
     </script>
-    """, height=120)
+    """, height=130)
 
     with st.expander("Fine-Tune Exact GPS Coordinates", expanded=False):
         c_lat, c_lon = st.columns(2)

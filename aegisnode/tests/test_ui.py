@@ -188,6 +188,25 @@ def test_build_live_scenario_data():
 
     reset_live_state()
 
+def test_route_history_waypoints():
+    from aegisnode.data.live_bridge import (
+        add_route_waypoint,
+        clear_route_history,
+        build_live_scenario_data,
+        get_live_state,
+        reset_live_state
+    )
+    reset_live_state()
+    clear_route_history()
+    state = get_live_state()
+    assert len(state["route_history"]) == 1
 
+    add_route_waypoint(4.388500, 100.967500, "UTP Main Gate")
+    add_route_waypoint(4.386200, 100.971200, "UTP Oval Park")
+    add_route_waypoint(4.383500, 100.972000, "UTP Chancellor Hall")
 
+    sc = build_live_scenario_data()
+    assert len(sc["events"]) >= 4
+    assert sc["events"][1]["location"]["label"] == "UTP Main Gate"
 
+    reset_live_state()

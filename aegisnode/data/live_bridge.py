@@ -9,22 +9,23 @@ import os
 import json
 import time
 import math
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 BRIDGE_FILE = Path(__file__).resolve().parent / "live_bridge.json"
 POD_CAPTURE_FILE = Path(__file__).resolve().parent / "live_pod_capture.jpg"
 
 DEFAULT_STATE: Dict[str, Any] = {
-    "active_scenario": "fraud_gps_spoof.json",
+    "active_scenario": "normal_delivery.json",
     "last_action_timestamp": time.time(),
     "courier_action": "STANDBY",
     "otp_input": "",
     "otp_verified": False,
-    "warden_action": "PACKAGE_FREEZE",
-    "trust_score": 18,
-    "highest_velocity_kmh": 458.0,
-    "last_message": "Session initialized. Awaiting courier telematics.",
+    "warden_action": "AUTO_CLEAR",
+    "trust_score": 100,
+    "highest_velocity_kmh": 30.0,
+    "last_message": "Session initialized. Courier edge terminal online at UTP Campus.",
     "courier_lat": 4.385200,
     "courier_lon": 100.978100,
     "courier_accuracy_m": 12.0,
@@ -38,6 +39,29 @@ DEFAULT_STATE: Dict[str, Any] = {
     "live_photo_status": "NONE",
     "live_photo_variance": 0.0,
     "live_photo_brightness": 0.0,
+    "route_history": [
+        {
+            "lat": 4.388500,
+            "lon": 100.967500,
+            "label": "UTP Main Gate Checkpoint (Tronoh)",
+            "timestamp": "2026-10-09T14:10:00",
+            "speed_kmh": 28.0
+        },
+        {
+            "lat": 4.386200,
+            "lon": 100.971200,
+            "label": "UTP Oval Park / Info Center",
+            "timestamp": "2026-10-09T14:14:00",
+            "speed_kmh": 32.0
+        },
+        {
+            "lat": 4.385200,
+            "lon": 100.978100,
+            "label": "UTP Campus, Tronoh, Perak",
+            "timestamp": "2026-10-09T14:18:00",
+            "speed_kmh": 30.0
+        }
+    ],
 }
 
 # In-memory shared singleton cache for fast sub-millisecond access
@@ -83,6 +107,53 @@ def get_live_state() -> Dict[str, Any]:
     except Exception:
         return dict(DEFAULT_STATE)
 
+def add_route_waypoint(
+    lat: float,
+    lon: float,
+    label: str,
+    speed_kmh: float = 30.0
+) -> Dict[str, Any]:
+    """Appends an explicit waypoint to courier journey breadcrumbs."""
+    state = get_live_state()
+    lat_f = round(float(lat), 6)
+    lon_f = round(float(lon), 6)
+    history = state.get("route_history", [])
+    t_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    history.append({
+        "lat": lat_f,
+        "lon": lon_f,
+        "label": label,
+        "timestamp": t_str,
+        "speed_kmh": round(float(speed_kmh), 1)
+    })
+    state["route_history"] = history
+    state["courier_lat"] = lat_f
+    state["courier_lon"] = lon_f
+    state["courier_location_label"] = label
+    state["last_action_timestamp"] = time.time()
+    _save_state(state)
+    return state
+
+def clear_route_history() -> Dict[str, Any]:
+    """Resets route breadcrumbs to single current courier fix."""
+    state = get_live_state()
+    cur_lat = state.get("courier_lat", 4.385200)
+    cur_lon = state.get("courier_lon", 100.978100)
+    cur_label = state.get("courier_location_label", "UTP Campus, Tronoh, Perak")
+    t_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    state["route_history"] = [
+        {
+            "lat": cur_lat,
+            "lon": cur_lon,
+            "label": f"Start Fix: {cur_label}",
+            "timestamp": t_str,
+            "speed_kmh": 0.0
+        }
+    ]
+    state["last_action_timestamp"] = time.time()
+    _save_state(state)
+    return state
+
 def update_courier_telematics(
     lat: float,
     lon: float,
@@ -91,11 +162,36 @@ def update_courier_telematics(
 ) -> Dict[str, Any]:
     """Updates courier hardware GPS coordinates acquired from smartphone browser."""
     state = get_live_state()
-    state["courier_lat"] = round(float(lat), 6)
-    state["courier_lon"] = round(float(lon), 6)
+    lat_f = round(float(lat), 6)
+    lon_f = round(float(lon), 6)
+    state["courier_lat"] = lat_f
+    state["courier_lon"] = lon_f
     state["courier_location_label"] = label
     state["courier_accuracy_m"] = round(float(accuracy_m), 1)
     state["last_action_timestamp"] = time.time()
+
+    history = state.get("route_history", [])
+    t_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    if not history:
+        history.append({
+            "lat": lat_f,
+            "lon": lon_f,
+            "label": label,
+            "timestamp": t_str,
+            "speed_kmh": 0.0
+        })
+    else:
+        last_pt = history[-1]
+        dist = haversine_distance_km(last_pt["lat"], last_pt["lon"], lat_f, lon_f)
+        if dist > 0.02:  # > 20 meters
+            history.append({
+                "lat": lat_f,
+                "lon": lon_f,
+                "label": label,
+                "timestamp": t_str,
+                "speed_kmh": 30.0
+            })
+    state["route_history"] = history
     _save_state(state)
     return state
 
@@ -328,6 +424,37 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
     photo_status = state.get("live_photo_status", "VALID")
     photo_var = state.get("live_photo_variance", 72.4)
 
+    history = state.get("route_history", [])
+    if not history:
+        history = [
+            {
+                "lat": 4.388500,
+                "lon": 100.967500,
+                "label": "UTP Main Gate Checkpoint (Tronoh)",
+                "timestamp": "2026-10-09T14:10:00",
+                "speed_kmh": 28.0
+            },
+            {
+                "lat": 4.386200,
+                "lon": 100.971200,
+                "label": "UTP Oval Park / Information Center",
+                "timestamp": "2026-10-09T14:14:00",
+                "speed_kmh": 32.0
+            },
+            {
+                "lat": cur_lat,
+                "lon": cur_lon,
+                "label": f"Courier Fix: {cur_label}",
+                "timestamp": "2026-10-09T14:18:00",
+                "speed_kmh": 30.0
+            }
+        ]
+
+    # Destination target: defaults to Chancellor Hall, UTP
+    dest_lat = 4.383500
+    dest_lon = 100.972000
+    dest_label = "Chancellor Hall, UTP Campus"
+
     scenario_dict = {
         "scenario_id": "SCN-LIVE-FIELD-01",
         "shipment_id": "GDX-SHP-20261003-042",
@@ -337,66 +464,73 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
         "parcel_value_myr": 1850.00,
         "parcel_category": "High-Value Consumer Electronics (iPhone 17 Pro)",
         "expected_destination": {
-            "lat": 4.383500,
-            "lon": 100.972000,
-            "label": "Chancellor Hall, UTP Campus"
+            "lat": dest_lat,
+            "lon": dest_lon,
+            "label": dest_label
         },
         "geofence_center": {
-            "lat": 4.383500,
-            "lon": 100.972000,
-            "radius_meters": 150
+            "lat": dest_lat,
+            "lon": dest_lon,
+            "radius_meters": 300
         }
     }
 
-    # Physical road checkpoints around UTP Perak
-    events = [
-        {
-            "sequence": 1,
-            "timestamp": "2026-10-09T14:10:00",
-            "event_type": "TRANSIT_PING",
-            "location": {
-                "lat": 4.388500,
-                "lon": 100.967500,
-                "label": "UTP Main Gate Checkpoint (Tronoh)"
-            },
-            "speed_kmh": 28.0,
-            "cell_tower_id": "TWR-UTP-01"
-        },
-        {
-            "sequence": 2,
-            "timestamp": "2026-10-09T14:14:00",
-            "event_type": "TRANSIT_PING",
-            "location": {
-                "lat": 4.386200,
-                "lon": 100.971200,
-                "label": "UTP Oval Park / Information Center"
-            },
-            "speed_kmh": 32.0,
-            "cell_tower_id": "TWR-UTP-01"
-        },
-        {
-            "sequence": 3,
-            "timestamp": "2026-10-09T14:18:00",
-            "event_type": "TRANSIT_PING",
-            "location": {
-                "lat": cur_lat,
-                "lon": cur_lon,
-                "label": f"Courier Fix: {cur_label}"
-            },
-            "speed_kmh": 30.0,
-            "cell_tower_id": "TWR-UTP-01"
-        }
-    ]
+    base_time = datetime(2026, 10, 9, 14, 10, 0)
+    events: List[Dict[str, Any]] = []
 
+    for idx, pt in enumerate(history):
+        pt_lat = pt.get("lat", cur_lat)
+        pt_lon = pt.get("lon", cur_lon)
+        pt_lbl = pt.get("label", f"Waypoint #{idx+1}")
+        pt_spd = pt.get("speed_kmh", 28.0)
+        t_iso = pt.get("timestamp")
+        if not t_iso:
+            t_iso = (base_time + timedelta(minutes=idx * 3)).strftime("%Y-%m-%dT%H:%M:%S")
+
+        events.append({
+            "sequence": idx + 1,
+            "timestamp": t_iso,
+            "event_type": "TRANSIT_PING",
+            "location": {
+                "lat": pt_lat,
+                "lon": pt_lon,
+                "label": pt_lbl
+            },
+            "speed_kmh": pt_spd,
+            "cell_tower_id": "TWR-UTP-01"
+        })
+
+    # If current courier location differs from the last history point by > 30 meters, append it
+    if events:
+        last_ev = events[-1]
+        dist_cur = haversine_distance_km(last_ev["location"]["lat"], last_ev["location"]["lon"], cur_lat, cur_lon)
+        if dist_cur > 0.03:
+            last_t = datetime.fromisoformat(last_ev["timestamp"])
+            events.append({
+                "sequence": len(events) + 1,
+                "timestamp": (last_t + timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+                "event_type": "TRANSIT_PING",
+                "location": {
+                    "lat": cur_lat,
+                    "lon": cur_lon,
+                    "label": f"Courier Live Fix: {cur_label}"
+                },
+                "speed_kmh": 30.0,
+                "cell_tower_id": "TWR-UTP-01"
+            })
+
+    # Now append terminal event based on courier action:
     if courier_action == "TRIGGER_GPS_SPOOF":
         # Coordinate jump across Malaysia to Menara PJX in 2.0 minutes
         target_lat = state.get("spoof_target_lat", 3.103200)
         target_lon = state.get("spoof_target_lon", 101.644500)
         target_label = state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
         spd = state.get("highest_velocity_kmh", 5559.0)
+        last_t = datetime.fromisoformat(events[-1]["timestamp"]) if events else base_time
+        jump_t = (last_t + timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S")
         events.append({
-            "sequence": 4,
-            "timestamp": "2026-10-09T14:20:00",
+            "sequence": len(events) + 1,
+            "timestamp": jump_t,
             "event_type": "TRANSIT_PING",
             "location": {
                 "lat": target_lat,
@@ -406,16 +540,18 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
             "speed_kmh": spd,
             "cell_tower_id": "TWR-UTP-01"
         })
-    elif courier_action in ("TRIGGER_POD_FORGERY", "TRIGGER_NORMAL_DELIVERY", "SUBMIT_OTP") or has_photo:
+    else:
         pod_stat = "FORGED" if (courier_action == "TRIGGER_POD_FORGERY" or photo_status == "FORGED") else "VALID"
+        last_t = datetime.fromisoformat(events[-1]["timestamp"]) if events else base_time
+        deliv_t = (last_t + timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S")
         events.append({
-            "sequence": 4,
-            "timestamp": "2026-10-09T14:24:00",
+            "sequence": len(events) + 1,
+            "timestamp": deliv_t,
             "event_type": "DELIVERY_ATTEMPT",
             "location": {
-                "lat": 4.383500,
-                "lon": 100.972000,
-                "label": "UTP Chancellor Hall Delivery Zone"
+                "lat": cur_lat,
+                "lon": cur_lon,
+                "label": f"Delivery Handover ({cur_label})"
             },
             "speed_kmh": 0.0,
             "cell_tower_id": "TWR-UTP-02",
@@ -423,27 +559,6 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
                 "photo_status": pod_stat,
                 "vision_anomaly_score": 0.92 if pod_stat == "FORGED" else 0.04,
                 "exif_camera_model": "Phone Camera (Live Hardware Stream)",
-                "exif_timestamp_match": True,
-                "otp_verified": otp_cleared,
-                "optical_variance": photo_var
-            }
-        })
-    else:
-        events.append({
-            "sequence": 4,
-            "timestamp": "2026-10-09T14:24:00",
-            "event_type": "DELIVERY_ATTEMPT",
-            "location": {
-                "lat": 4.383500,
-                "lon": 100.972000,
-                "label": "UTP Chancellor Hall Delivery Zone"
-            },
-            "speed_kmh": 0.0,
-            "cell_tower_id": "TWR-UTP-02",
-            "pod_evidence": {
-                "photo_status": "VALID",
-                "vision_anomaly_score": 0.04,
-                "exif_camera_model": "Phone Camera",
                 "exif_timestamp_match": True,
                 "otp_verified": otp_cleared,
                 "optical_variance": photo_var

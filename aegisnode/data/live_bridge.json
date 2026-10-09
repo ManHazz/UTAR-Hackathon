@@ -1,13 +1,13 @@
 {
-  "active_scenario": "fraud_gps_spoof.json",
-  "last_action_timestamp": 1791556727.5460072,
+  "active_scenario": "normal_delivery.json",
+  "last_action_timestamp": 1791557469.4146955,
   "courier_action": "STANDBY",
   "otp_input": "",
   "otp_verified": false,
-  "warden_action": "PACKAGE_FREEZE",
-  "trust_score": 18,
-  "highest_velocity_kmh": 458.0,
-  "last_message": "Session initialized. Awaiting courier telematics.",
+  "warden_action": "AUTO_CLEAR",
+  "trust_score": 100,
+  "highest_velocity_kmh": 30.0,
+  "last_message": "Session initialized. Courier edge terminal online at UTP Campus.",
   "courier_lat": 4.3852,
   "courier_lon": 100.9781,
   "courier_accuracy_m": 12.0,
@@ -20,5 +20,28 @@
   "live_photo_path": "",
   "live_photo_status": "NONE",
   "live_photo_variance": 0.0,
-  "live_photo_brightness": 0.0
+  "live_photo_brightness": 0.0,
+  "route_history": [
+    {
+      "lat": 4.3885,
+      "lon": 100.9675,
+      "label": "UTP Main Gate Checkpoint (Tronoh)",
+      "timestamp": "2026-10-09T14:10:00",
+      "speed_kmh": 28.0
+    },
+    {
+      "lat": 4.3862,
+      "lon": 100.9712,
+      "label": "UTP Oval Park / Info Center",
+      "timestamp": "2026-10-09T14:14:00",
+      "speed_kmh": 32.0
+    },
+    {
+      "lat": 4.3852,
+      "lon": 100.9781,
+      "label": "UTP Campus, Tronoh, Perak",
+      "timestamp": "2026-10-09T14:18:00",
+      "speed_kmh": 30.0
+    }
+  ]
 }
