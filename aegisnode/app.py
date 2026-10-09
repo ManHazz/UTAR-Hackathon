@@ -174,12 +174,18 @@ render_html(f"""
 </div>
 """)
 
-# --- 1-CLICK QUICK SCENARIO SELECTOR BAR ---
+# --- 1-CLICK ACTIVE INCIDENT TRIAGE QUEUE ---
+render_html("""
+<div class="panel-header">
+    <span>Active Incident Triage Queue</span>
+</div>
+""")
+
 col_s1, col_s2, col_s3, col_s4 = st.columns(4)
 with col_s1:
     is_active = (st.session_state.active_scenario_file == "fraud_gps_spoof.json")
     if st.button(
-        "[CRITICAL] 1. GPS Teleportation" + (" [ACTIVE]" if is_active else ""),
+        "CRITICAL | INC-042: GPS Teleport" + (" [ACTIVE]" if is_active else ""),
         use_container_width=True,
         type="primary" if is_active else "secondary",
         help="Simulate Phantom Courier mock location jump"
@@ -190,7 +196,7 @@ with col_s1:
 with col_s2:
     is_active = (st.session_state.active_scenario_file == "normal_delivery.json")
     if st.button(
-        "[NOMINAL] 2. Clean Delivery" + (" [ACTIVE]" if is_active else ""),
+        "NOMINAL | INC-081: Clean Courier" + (" [ACTIVE]" if is_active else ""),
         use_container_width=True,
         type="primary" if is_active else "secondary",
         help="Simulate legitimate delivery route"
@@ -201,7 +207,7 @@ with col_s2:
 with col_s3:
     is_active = (st.session_state.active_scenario_file == "fraud_pod_spoof.json")
     if st.button(
-        "[HIGH RISK] 3. Forged POD Photo" + (" [ACTIVE]" if is_active else ""),
+        "HIGH RISK | INC-109: POD Forgery" + (" [ACTIVE]" if is_active else ""),
         use_container_width=True,
         type="primary" if is_active else "secondary",
         help="Simulate car floor mat / screenshot POD forgery"
@@ -212,7 +218,7 @@ with col_s3:
 with col_s4:
     is_active = (st.session_state.active_scenario_file == "fraud_api_scraping.json")
     if st.button(
-        "[CYBER THREAT] 4. API Exfiltration" + (" [ACTIVE]" if is_active else ""),
+        "CRITICAL | SEC-304: API Exfiltration" + (" [ACTIVE]" if is_active else ""),
         use_container_width=True,
         type="primary" if is_active else "secondary",
         help="Simulate 03:00 AM bulk PII scraping"
@@ -220,33 +226,33 @@ with col_s4:
         select_scenario("fraud_api_scraping.json")
         st.rerun()
 
-# --- TOP CYBER KPI SUMMARY CARDS ---
+# --- TOP SOC TELEMETRY STRIP ---
 render_html("""
 <div class="kpi-container">
-    <div class="cyber-kpi kpi-cyan">
-        <div class="kpi-label">Today's Pings</div>
-        <div class="kpi-value">14,820</div>
-        <div class="kpi-delta delta-green">Up 8.2% vs baseline</div>
+    <div class="cyber-kpi">
+        <div class="kpi-label">Telemetry Ingest / 24h</div>
+        <div class="kpi-value tabular-nums">14,820</div>
+        <div class="kpi-delta delta-green">+8.2% baseline rate</div>
     </div>
-    <div class="cyber-kpi kpi-emerald">
+    <div class="cyber-kpi">
         <div class="kpi-label">Verified Deliveries</div>
-        <div class="kpi-value">1,248</div>
-        <div class="kpi-delta delta-green">99.2% SLA Pass</div>
+        <div class="kpi-value tabular-nums">1,248</div>
+        <div class="kpi-delta delta-cyan">99.2% SLA pass</div>
     </div>
-    <div class="cyber-kpi kpi-crimson">
-        <div class="kpi-label">Active Intercepts</div>
-        <div class="kpi-value">3 Flagged</div>
-        <div class="kpi-delta delta-red">Autonomous Containment</div>
+    <div class="cyber-kpi">
+        <div class="kpi-label">Autonomous Intercepts</div>
+        <div class="kpi-value tabular-nums">3 FLAGGED</div>
+        <div class="kpi-delta delta-red">Active quarantine</div>
     </div>
-    <div class="cyber-kpi kpi-purple">
-        <div class="kpi-label">Protected Value</div>
-        <div class="kpi-value">RM 42,950</div>
-        <div class="kpi-delta delta-green">Preserved Reserves</div>
+    <div class="cyber-kpi">
+        <div class="kpi-label">Protected Cargo</div>
+        <div class="kpi-value tabular-nums">RM 42,950</div>
+        <div class="kpi-delta delta-green">Zero reserve breach</div>
     </div>
-    <div class="cyber-kpi kpi-amber">
-        <div class="kpi-label">Zero-Trust Ledger</div>
-        <div class="kpi-value">100% Valid</div>
-        <div class="kpi-delta delta-green">SHA-256 Non-Repudiated</div>
+    <div class="cyber-kpi">
+        <div class="kpi-label">Cryptographic Consensus</div>
+        <div class="kpi-value tabular-nums">100% VALID</div>
+        <div class="kpi-delta delta-green">SHA-256 non-repudiated</div>
     </div>
 </div>
 """)
@@ -287,11 +293,11 @@ with left_col:
     is_api_scenario = "subcontractor_id" in scenario_data
     
     if not is_api_scenario:
-        map_pin_svg = get_svg_icon("map-pin", color="#38BDF8", size=18)
+        map_pin_svg = get_svg_icon("map-pin", color="#38BDF8", size=16)
         render_html(f"""
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <div class="panel-header">
             {map_pin_svg}
-            <span style="font-weight:700; font-size:1.1rem; color:#F8FAFC;">Spatial Telemetry & Road Kinematics</span>
+            <span>Spatial Telemetry & Road Kinematics</span>
         </div>
         """)
         render_interactive_map(scenario_data, sentinel.get("anomalies_detected", False), height=320)
@@ -304,7 +310,7 @@ with left_col:
             source_badge_text = "ENGINE: LIVE OPENSTREETMAP OSRM" if source_engine == "LIVE_OSRM" else ("ENGINE: KLANG VALLEY GRAPH (CACHE)" if source_engine == "PREBAKED_CACHE" else "ENGINE: HAVERSINE TORTUOSITY PHYSICS")
             render_html(f"""
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; margin-bottom:4px;">
-                <span style="font-size:11px; color:#94A3B8; font-weight:600;">ROAD GRAPH FEASIBILITY</span>
+                <span style="font-size:11px; color:#94A3B8; font-weight:600; font-family:'JetBrains Mono', monospace;">ROAD GRAPH FEASIBILITY</span>
                 <span style="font-size:10px; font-weight:700; color:{source_badge_color}; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-family:'JetBrains Mono', monospace;">[{source_badge_text}]</span>
             </div>
             """)
@@ -317,27 +323,27 @@ with left_col:
 
     else:
         # API Scraping Threat Visualization
-        activity_svg = get_svg_icon("activity", color="#EF4444", size=18)
+        activity_svg = get_svg_icon("activity", color="#EF4444", size=16)
         render_html(f"""
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <div class="panel-header">
             {activity_svg}
-            <span style="font-weight:700; font-size:1.1rem; color:#F8FAFC;">Cyber Threat Radar: Out-of-Hours API Harvest</span>
+            <span>Cyber Threat Radar: Out-of-Hours API Harvest</span>
         </div>
         """)
         st.plotly_chart(build_api_threat_chart(scenario_data), use_container_width=True)
 
         render_html(f"""
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
-            <div style="color: #EF4444; font-weight: 800; font-size: 13px; margin-bottom: 6px; letter-spacing:0.04em;">
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px;">
+            <div style="color: #EF4444; font-weight: 800; font-size: 12px; margin-bottom: 6px; letter-spacing:0.04em; font-family:'JetBrains Mono', monospace;">
                 [THREAT DOSSIER] DATA EXFILTRATION DETECTED
             </div>
             <div style="font-size: 12px; color: #CBD5E1; line-height: 1.6;">
                 • <b>Compromised Credential:</b> <code>{scenario_data.get('subcontractor_id')}</code><br>
                 • <b>Attacker Source IP:</b> <code>{scenario_data.get('source_ip')}</code> (Identified Tor/Bulletproof VPN Node)<br>
                 • <b>Target Endpoint:</b> <code>/api/v2/manifests/batch-export</code><br>
-                • <b>Harvest Rate:</b> <b>520 requests/minute</b> (Standard limit: 60/min)<br>
+                • <b>Harvest Rate:</b> <b>520 requests/minute</b> (Standard baseline: 60/min)<br>
                 • <b>Target Data:</b> 12,500 Customer PII records (Phone, Delivery Addresses)<br>
-                • <b>Warden Containment:</b> API Token automatically revoked at gateway. IP blacklisted in WAF.
+                • <b>Warden Containment:</b> API Token revoked at gateway. IP blacklisted in WAF.
             </div>
         </div>
         """)
@@ -345,9 +351,9 @@ with left_col:
     # Raw Telemetry Stream
     terminal_svg = get_svg_icon("terminal", color="#94A3B8", size=16)
     render_html(f"""
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+    <div class="panel-header">
         {terminal_svg}
-        <span style="font-weight:700; font-size:1.05rem; color:#F8FAFC;">Raw Telemetry Stream (Audit Log)</span>
+        <span>Raw Telemetry Stream (Audit Log)</span>
     </div>
     """)
     events = scenario_data.get("events", [])
@@ -368,36 +374,55 @@ with left_col:
         st.dataframe(pd.DataFrame(events), use_container_width=True, hide_index=True)
 
 with right_col:
-    cpu_svg = get_svg_icon("cpu", color="#8B5CF6", size=18)
+    crosshair_svg = get_svg_icon("crosshair", color="#38BDF8", size=16)
     render_html(f"""
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-        {cpu_svg}
-        <span style="font-weight:700; font-size:1.1rem; color:#F8FAFC;">Agentic Investigation & Zero-Trust Decision</span>
+    <div class="panel-header">
+        {crosshair_svg}
+        <span>Zero-Trust Risk Scorecard & Policy Synthesis</span>
     </div>
     """)
 
-    # Trust Score Gauge & Risk Badge
-    g_col1, g_col2 = st.columns([6, 6])
-    with g_col1:
-        st.plotly_chart(build_gauge_chart(investigator["trust_score"]), use_container_width=True)
-    with g_col2:
-        st.markdown("<div style='padding-top: 24px;'>", unsafe_allow_html=True)
-        risk_lvl = investigator.get("risk_level", "LOW")
-        if risk_lvl == "CRITICAL":
-            st.error("**[RISK CLASSIFICATION] CRITICAL COMPROMISE**")
-        elif risk_lvl == "MEDIUM":
-            st.warning("**[RISK CLASSIFICATION] ELEVATED ANOMALY**")
-        else:
-            st.success("**[RISK CLASSIFICATION] NOMINAL (CLEAR)**")
+    # Authoritative SOC Scorecard & Risk Badge
+    risk_lvl = investigator.get("risk_level", "LOW")
+    risk_color = "#EF4444" if risk_lvl == "CRITICAL" else ("#F59E0B" if risk_lvl == "MEDIUM" else "#10B981")
+    risk_border = "rgba(239, 68, 68, 0.4)" if risk_lvl == "CRITICAL" else ("rgba(245, 158, 11, 0.4)" if risk_lvl == "MEDIUM" else "rgba(16, 185, 129, 0.4)")
+    risk_bg = "rgba(239, 68, 68, 0.12)" if risk_lvl == "CRITICAL" else ("rgba(245, 158, 11, 0.12)" if risk_lvl == "MEDIUM" else "rgba(16, 185, 129, 0.10)")
 
-        st.write(f"**Warden Policy:** `{warden['action']}`")
-        st.write(f"**Target Entity:** `{warden['target_id']}`")
-        if "highest_velocity_kmh" in sentinel and sentinel["highest_velocity_kmh"] > 0:
-            st.write(f"**Peak Speed:** `{sentinel['highest_velocity_kmh']:.0f} km/h`")
-        if "parcel_value_myr" in scenario_data:
-            cargo_mult = investigator.get("penalties", {}).get("cargo_multiplier", 1.0)
-            st.write(f"**Cargo at Risk:** `RM {scenario_data['parcel_value_myr']:.2f}` (Risk Tier: `{cargo_mult:.2f}x`)")
-        st.markdown("</div>", unsafe_allow_html=True)
+    cargo_text = f"RM {scenario_data.get('parcel_value_myr', 0):.2f}" if "parcel_value_myr" in scenario_data else "N/A"
+    peak_speed_text = f"{sentinel.get('highest_velocity_kmh', 0):.0f} km/h" if sentinel.get("highest_velocity_kmh", 0) > 0 else "Normal"
+
+    sc_col1, sc_col2 = st.columns([5, 5])
+    with sc_col1:
+        st.plotly_chart(build_gauge_chart(investigator["trust_score"]), use_container_width=True)
+    with sc_col2:
+        render_html(f"""
+        <div style="background:#090E19; border:1px solid #1A2338; border-radius:6px; padding:12px; margin-top:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:10px; color:#64748B; font-weight:700; font-family:'JetBrains Mono', monospace; text-transform:uppercase;">THREAT CLASSIFICATION</span>
+                <span style="font-size:10px; font-weight:700; color:{risk_color}; background:{risk_bg}; border:1px solid {risk_border}; padding:2px 8px; border-radius:4px; font-family:'JetBrains Mono', monospace;">
+                    {risk_lvl}
+                </span>
+            </div>
+            <div class="scorecard-grid">
+                <div class="scorecard-cell">
+                    <div class="scorecard-cell-label">POLICY ENFORCED</div>
+                    <div class="scorecard-cell-value">{warden['action']}</div>
+                </div>
+                <div class="scorecard-cell">
+                    <div class="scorecard-cell-label">TARGET ENTITY</div>
+                    <div class="scorecard-cell-value">{warden['target_id']}</div>
+                </div>
+                <div class="scorecard-cell">
+                    <div class="scorecard-cell-label">MAX KINEMATICS</div>
+                    <div class="scorecard-cell-value">{peak_speed_text}</div>
+                </div>
+                <div class="scorecard-cell">
+                    <div class="scorecard-cell-label">EXPOSED VALUE</div>
+                    <div class="scorecard-cell-value">{cargo_text}</div>
+                </div>
+            </div>
+        </div>
+        """)
 
     # Forensic Penalty Deduction Breakdown Chart
     if "penalties" in investigator:
@@ -408,7 +433,7 @@ with right_col:
 
     # Dynamic Warden Action Banner
     warden_act = warden.get("action", "AUTO_CLEAR")
-    alert_badge_icon = get_svg_icon("shield-alert" if warden_act != "AUTO_CLEAR" else "shield-check", color="#FFFFFF", size=24)
+    alert_badge_icon = get_svg_icon("shield-alert" if warden_act != "AUTO_CLEAR" else "shield-check", color="#FFFFFF", size=22)
     if warden_act in ("PACKAGE_FREEZE", "API_CREDENTIAL_REVOKED"):
         render_html(f"""
         <div class="warden-banner banner-freeze">
@@ -444,8 +469,8 @@ with right_col:
     if st.session_state.active_scenario_file == "fraud_pod_spoof.json":
         if not st.session_state.otp_cleared:
             render_html("""
-            <div style="font-size:12px; font-weight:700; color:#F59E0B; margin-top:8px; margin-bottom:4px;">
-                [INTERACTIVE VERIFICATION] Step-Up OTP Validation Gate
+            <div style="font-size:11px; font-weight:700; color:#F59E0B; margin-top:8px; margin-bottom:4px; font-family:'JetBrains Mono', monospace;">
+                [CHALLENGE GATE] Recipient OTP Step-Up Authentication
             </div>
             """)
             c_otp1, c_otp2 = st.columns([3, 2])
@@ -465,30 +490,33 @@ with right_col:
                         st.error("Invalid OTP code. Try 849201.")
         else:
             render_html("""
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px 14px; margin-top:8px; margin-bottom:8px;">
-                <span style="font-size:12px; color:#A7F3D0; font-weight:600;">[CHALLENGE RESOLVED] Customer verified OTP 849201. Consignment release approved.</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:10px 14px; margin-top:8px; margin-bottom:8px;">
+                <span style="font-size:11px; color:#A7F3D0; font-weight:600; font-family:'JetBrains Mono', monospace;">[CHALLENGE RESOLVED] Customer verified OTP 849201. Consignment release approved.</span>
             </div>
             """)
             if st.button("Reset Challenge Demo", use_container_width=False):
                 st.session_state.otp_cleared = False
                 st.rerun()
 
-
-    # Multi-Agent Collaboration Deck
-    st.markdown("##### **Autonomous Multi-Agent Pipeline Deck**")
-    eye_svg = get_svg_icon("eye", color="#06B6D4", size=15)
-    cpu_card_svg = get_svg_icon("cpu", color="#8B5CF6", size=15)
+    # SOAR Multi-Agent Pipeline Deck
+    render_html("""
+    <div class="panel-header" style="margin-top:16px;">
+        <span>SOAR Automated Multi-Agent Pipeline</span>
+    </div>
+    """)
+    eye_svg = get_svg_icon("eye", color="#38BDF8", size=15)
+    cpu_card_svg = get_svg_icon("cpu", color="#818CF8", size=15)
     shield_card_svg = get_svg_icon("shield", color="#EF4444" if warden_act == "PACKAGE_FREEZE" else "#10B981", size=15)
 
-    # 1. Sentinel Agent Card
+    # 1. Sentinel Agent Step
     flags_html = "".join([f"<li style='color:#F87171;'>{f}</li>" for f in sentinel.get("flags", [])])
     render_html(f"""
-    <div class="agent-card agent-card-sentinel" style="margin-bottom:12px;">
+    <div class="agent-card agent-card-sentinel">
         <div class="agent-header">
             <div class="agent-name-badge">
                 {eye_svg}
                 <span>Sentinel Agent</span>
-                <span style="font-size:0.75rem; color:#06B6D4;">[Kinematic & Access Scanner]</span>
+                <span style="font-size:0.72rem; color:#38BDF8; font-family:'JetBrains Mono', monospace;">[Kinematic & Access Scanner]</span>
             </div>
             <span class="agent-latency-badge">18ms</span>
         </div>
@@ -500,14 +528,14 @@ with right_col:
     </div>
     """)
 
-    # 2. Investigator Agent Card
+    # 2. Investigator Agent Step
     render_html(f"""
-    <div class="agent-card agent-card-investigator" style="margin-bottom:12px;">
+    <div class="agent-card agent-card-investigator">
         <div class="agent-header">
             <div class="agent-name-badge">
                 {cpu_card_svg}
                 <span>Investigator Agent</span>
-                <span style="font-size:0.75rem; color:#8B5CF6;">[OSRM Physics & Forensic Reasoner]</span>
+                <span style="font-size:0.72rem; color:#818CF8; font-family:'JetBrains Mono', monospace;">[OSRM Physics & Forensic Reasoner]</span>
             </div>
             <span class="agent-latency-badge">142ms</span>
         </div>
@@ -518,16 +546,16 @@ with right_col:
     </div>
     """)
 
-    # 3. Warden Agent Card
+    # 3. Warden Agent Step
     warden_card_type = "agent-card-warden-freeze" if warden_act in ("PACKAGE_FREEZE", "API_CREDENTIAL_REVOKED") else ("agent-card-warden-otp" if warden_act == "STEP_UP_CHALLENGE" else "agent-card-warden-clear")
     actions_html = "".join([f"<li>{act}</li>" for act in warden.get("actions_taken", [])])
     render_html(f"""
-    <div class="agent-card {warden_card_type}" style="margin-bottom:12px;">
+    <div class="agent-card {warden_card_type}">
         <div class="agent-header">
             <div class="agent-name-badge">
                 {shield_card_svg}
                 <span>Warden Agent</span>
-                <span style="font-size:0.75rem; color:{'#EF4444' if warden_act == 'PACKAGE_FREEZE' else '#10B981'};">[Risk-Adaptive Policy Enforcer]</span>
+                <span style="font-size:0.72rem; color:{'#EF4444' if warden_act == 'PACKAGE_FREEZE' else '#10B981'}; font-family:'JetBrains Mono', monospace;">[Risk-Adaptive Policy Enforcer]</span>
             </div>
             <span class="agent-latency-badge">8ms</span>
         </div>

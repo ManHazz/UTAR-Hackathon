@@ -1,6 +1,7 @@
 """
 AegisNode - Plotly Visualization Suite
-Interactive cyber speedometer, physical feasibility charts, and API threat monitors.
+High-Density Enterprise SOC Telemetry & Kinematics Visualizations.
+Strict adherence to Splunk ES / CrowdStrike Falcon / Microsoft Sentinel aesthetic.
 """
 
 from typing import List, Dict, Any, Optional
@@ -8,7 +9,7 @@ import plotly.graph_objects as go
 
 def build_gauge_chart(score: int) -> go.Figure:
     """
-    Renders high-impact Zero-Trust Score speedometer gauge with dark cyber aesthetic.
+    Renders high-impact Zero-Trust Score speedometer gauge with dark tactical SOC aesthetic.
     """
     if score >= 75:
         primary_color = "#10B981"
@@ -21,36 +22,27 @@ def build_gauge_chart(score: int) -> go.Figure:
         status_text = "CRITICAL BREACH (PACKAGE FREEZE)"
 
     fig = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+        mode="gauge+number",
         value=score,
         domain={'x': [0, 1], 'y': [0, 1]},
-        delta={
-            'reference': 85,
-            'increasing': {'color': "#10B981"},
-            'decreasing': {'color': "#EF4444"}
-        },
-        title={
-            'text': f"<b>ZERO-TRUST SCORE</b><br><span style='font-size:12px;color:{primary_color};font-weight:700;'>{status_text}</span>",
-            'font': {'size': 16, 'color': '#E2E8F0'}
-        },
         number={
             'suffix': "/100",
-            'font': {'size': 38, 'color': primary_color, 'family': 'Plus Jakarta Sans, Arial Black'}
+            'font': {'size': 34, 'color': primary_color, 'family': 'JetBrains Mono, monospace'}
         },
         gauge={
-            'axis': {'range': [0, 100], 'tickwidth': 2, 'tickcolor': "#64748B"},
-            'bar': {'color': primary_color, 'thickness': 0.38},
-            'bgcolor': "rgba(15, 23, 42, 0.6)",
+            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#334155", 'tickfont': {'size': 9, 'color': '#64748B'}},
+            'bar': {'color': primary_color, 'thickness': 0.32},
+            'bgcolor': "#090E19",
             'borderwidth': 1,
-            'bordercolor': "rgba(255, 255, 255, 0.1)",
+            'bordercolor': "#1E293B",
             'steps': [
-                {'range': [0, 40], 'color': 'rgba(239, 68, 68, 0.3)'},
-                {'range': [40, 75], 'color': 'rgba(245, 158, 11, 0.3)'},
-                {'range': [75, 100], 'color': 'rgba(16, 185, 129, 0.3)'}
+                {'range': [0, 40], 'color': 'rgba(239, 68, 68, 0.15)'},
+                {'range': [40, 75], 'color': 'rgba(245, 158, 11, 0.15)'},
+                {'range': [75, 100], 'color': 'rgba(16, 185, 129, 0.15)'}
             ],
             'threshold': {
-                'line': {'color': "#FFFFFF", 'width': 4},
-                'thickness': 0.85,
+                'line': {'color': "#FFFFFF", 'width': 3},
+                'thickness': 0.8,
                 'value': score
             }
         }
@@ -59,9 +51,9 @@ def build_gauge_chart(score: int) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font={'color': "#E2E8F0", 'family': 'Plus Jakarta Sans, sans-serif'},
-        height=240,
-        margin=dict(l=15, r=15, t=55, b=10)
+        font={'color': "#CBD5E1", 'family': 'JetBrains Mono, monospace'},
+        height=180,
+        margin=dict(l=10, r=10, t=10, b=5)
     )
     return fig
 
@@ -75,8 +67,8 @@ def build_route_feasibility_chart(route_evaluations: List[Dict[str, Any]]) -> go
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            height=200,
-            annotations=[dict(text="No route segments to evaluate", showarrow=False, font=dict(color="#94A3B8"))]
+            height=180,
+            annotations=[dict(text="No route segments to evaluate", showarrow=False, font=dict(color="#64748B"))]
         )
         return fig
 
@@ -89,7 +81,7 @@ def build_route_feasibility_chart(route_evaluations: List[Dict[str, Any]]) -> go
 
     # OSRM Expected Road Duration
     fig.add_trace(go.Bar(
-        name="OSRM Road Physics (Min)",
+        name="OSRM Expected (Min)",
         x=segments,
         y=expected_times,
         marker_color="#38BDF8",
@@ -100,7 +92,7 @@ def build_route_feasibility_chart(route_evaluations: List[Dict[str, Any]]) -> go
     # Actual Logged Duration (colored red if impossible)
     bar_colors = ["#EF4444" if imp else "#10B981" for imp in impossibles]
     fig.add_trace(go.Bar(
-        name="Courier Logged Time (Min)",
+        name="Courier Logged (Min)",
         x=segments,
         y=actual_times,
         marker_color=bar_colors,
@@ -111,20 +103,16 @@ def build_route_feasibility_chart(route_evaluations: List[Dict[str, Any]]) -> go
     fig.update_layout(
         barmode='group',
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(15, 23, 42, 0.4)",
-        font={'color': "#E2E8F0", 'family': 'Plus Jakarta Sans, sans-serif'},
-        title=dict(
-            text="<b>Road Kinematics: OSRM Required Duration vs. Logged Time</b>",
-            font=dict(size=13, color="#94A3B8")
-        ),
+        plot_bgcolor="#0A0E1A",
+        font={'color': "#94A3B8", 'family': 'JetBrains Mono, monospace'},
         xaxis=dict(
-            tickfont=dict(size=11, color="#CBD5E1"),
-            gridcolor="rgba(255,255,255,0.05)"
+            tickfont=dict(size=10, color="#CBD5E1"),
+            gridcolor="rgba(255,255,255,0.04)"
         ),
         yaxis=dict(
-            title=dict(text="Duration (Minutes)", font=dict(size=11, color="#94A3B8")),
-            tickfont=dict(size=10, color="#94A3B8"),
-            gridcolor="rgba(255,255,255,0.08)"
+            title=dict(text="Minutes", font=dict(size=10, color="#64748B")),
+            tickfont=dict(size=9, color="#64748B"),
+            gridcolor="rgba(255,255,255,0.06)"
         ),
         legend=dict(
             orientation="h",
@@ -132,10 +120,10 @@ def build_route_feasibility_chart(route_evaluations: List[Dict[str, Any]]) -> go
             y=1.02,
             xanchor="right",
             x=1,
-            font=dict(size=11)
+            font=dict(size=10, color="#94A3B8")
         ),
-        height=220,
-        margin=dict(l=20, r=20, t=35, b=20)
+        height=190,
+        margin=dict(l=15, r=15, t=25, b=15)
     )
     return fig
 
@@ -159,8 +147,8 @@ def build_api_threat_chart(scenario_data: Dict[str, Any]) -> go.Figure:
         x=timeline,
         y=[standard_limit] * len(timeline),
         mode="lines",
-        name=f"Standard Rate Limit ({standard_limit}/min)",
-        line=dict(color="#F59E0B", width=2, dash="dash"),
+        name=f"Threshold ({standard_limit}/min)",
+        line=dict(color="#F59E0B", width=1.5, dash="dash"),
         hoverinfo="name"
     ))
 
@@ -169,11 +157,11 @@ def build_api_threat_chart(scenario_data: Dict[str, Any]) -> go.Figure:
         x=timeline,
         y=surge,
         mode="lines+markers",
-        name="Subcontractor API Calls / Min",
-        line=dict(color="#EF4444", width=3),
-        marker=dict(size=8, color=["#38BDF8", "#38BDF8", "#F59E0B", "#EF4444", "#EF4444", "#10B981", "#10B981"]),
+        name="Ingested Requests / Min",
+        line=dict(color="#EF4444", width=2.5),
+        marker=dict(size=7, color=["#38BDF8", "#38BDF8", "#F59E0B", "#EF4444", "#EF4444", "#10B981", "#10B981"]),
         fill="tozeroy",
-        fillcolor="rgba(239, 68, 68, 0.15)",
+        fillcolor="rgba(239, 68, 68, 0.12)",
         hovertemplate="<b>Requests</b>: %{y} req/min at %{x}<extra></extra>"
     ))
 
@@ -181,35 +169,31 @@ def build_api_threat_chart(scenario_data: Dict[str, Any]) -> go.Figure:
     fig.add_annotation(
         x="03:15 (Warden Cutoff)",
         y=0,
-        text="WARDEN ENFORCEMENT: Token Revoked & IP Blocked",
+        text="AUTONOMOUS CONTAINMENT: Token Revoked",
         showarrow=True,
         arrowhead=2,
         arrowcolor="#10B981",
         arrowsize=1,
-        arrowwidth=2,
+        arrowwidth=1.5,
         ax=0,
-        ay=-80,
-        bgcolor="rgba(16, 185, 129, 0.2)",
+        ay=-60,
+        bgcolor="#090E1A",
         bordercolor="#10B981",
-        font=dict(size=11, color="#A7F3D0")
+        font=dict(size=10, color="#10B981", family="JetBrains Mono, monospace")
     )
 
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(15, 23, 42, 0.4)",
-        font={'color': "#E2E8F0", 'family': 'Plus Jakarta Sans, sans-serif'},
-        title=dict(
-            text="<b>Real-Time API Traffic Ingestion (Requests / Minute)</b>",
-            font=dict(size=13, color="#94A3B8")
-        ),
+        plot_bgcolor="#0A0E1A",
+        font={'color': "#94A3B8", 'family': 'JetBrains Mono, monospace'},
         xaxis=dict(
-            tickfont=dict(size=11, color="#CBD5E1"),
-            gridcolor="rgba(255,255,255,0.05)"
+            tickfont=dict(size=10, color="#CBD5E1"),
+            gridcolor="rgba(255,255,255,0.04)"
         ),
         yaxis=dict(
-            title=dict(text="Requests / Min", font=dict(size=11, color="#94A3B8")),
-            tickfont=dict(size=10, color="#94A3B8"),
-            gridcolor="rgba(255,255,255,0.08)"
+            title=dict(text="Req / Min", font=dict(size=10, color="#64748B")),
+            tickfont=dict(size=9, color="#64748B"),
+            gridcolor="rgba(255,255,255,0.06)"
         ),
         legend=dict(
             orientation="h",
@@ -217,10 +201,10 @@ def build_api_threat_chart(scenario_data: Dict[str, Any]) -> go.Figure:
             y=1.02,
             xanchor="right",
             x=1,
-            font=dict(size=11)
+            font=dict(size=10)
         ),
-        height=270,
-        margin=dict(l=20, r=20, t=35, b=20)
+        height=220,
+        margin=dict(l=15, r=15, t=25, b=15)
     )
     return fig
 
@@ -239,7 +223,7 @@ def build_penalty_breakdown_chart(penalties: Dict[str, Any], final_score: int) -
     colors.append("#38BDF8")
 
     if penalties.get("kinematic_road_violation", 0) > 0:
-        categories.append("Kinematic Violation")
+        categories.append("Kinematics Violation")
         values.append(-penalties["kinematic_road_violation"])
         colors.append("#EF4444")
 
@@ -249,7 +233,7 @@ def build_penalty_breakdown_chart(penalties: Dict[str, Any], final_score: int) -
         colors.append("#F59E0B")
 
     if penalties.get("pod_forgery", 0) > 0:
-        categories.append("Optical POD Forgery")
+        categories.append("POD Optical Forgery")
         values.append(-penalties["pod_forgery"])
         colors.append("#EF4444")
 
@@ -276,27 +260,23 @@ def build_penalty_breakdown_chart(penalties: Dict[str, Any], final_score: int) -
         marker=dict(color=colors),
         text=[f"{v:+d}" if i > 0 and i < len(values)-1 else f"{v}" for i, v in enumerate(values)],
         textposition="auto",
-        textfont=dict(size=11, color="#FFFFFF", family="JetBrains Mono, monospace")
+        textfont=dict(size=10, color="#FFFFFF", family="JetBrains Mono, monospace")
     ))
 
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(15, 23, 42, 0.4)",
-        font=dict(color="#E2E8F0", family="Plus Jakarta Sans, sans-serif"),
-        title=dict(
-            text="<b>Forensic Zero-Trust Penalty Deduction Matrix</b>",
-            font=dict(size=12, color="#94A3B8")
-        ),
+        plot_bgcolor="#0A0E1A",
+        font=dict(color="#94A3B8", family="JetBrains Mono, monospace"),
         xaxis=dict(
-            tickfont=dict(size=10, color="#94A3B8"),
-            gridcolor="rgba(255,255,255,0.06)",
+            tickfont=dict(size=9, color="#64748B"),
+            gridcolor="rgba(255,255,255,0.04)",
             range=[-80, 110]
         ),
         yaxis=dict(
             tickfont=dict(size=10, color="#CBD5E1"),
             autorange="reversed"
         ),
-        height=190,
-        margin=dict(l=15, r=15, t=32, b=15)
+        height=175,
+        margin=dict(l=10, r=10, t=15, b=10)
     )
     return fig

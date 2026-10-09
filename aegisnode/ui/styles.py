@@ -1,7 +1,7 @@
 """
 AegisNode - Custom CSS & Styling System
-Provides Cyber-Physical SOC command center aesthetics, dark glassmorphism,
-pulse animations, SVG vector icons, and enterprise UX component styling.
+Enterprise-Grade Cyber-Physical SOC Command Center Design System
+Strict adherence to Splunk ES / CrowdStrike Falcon / Microsoft Sentinel aesthetic.
 Zero emojis - 100% professional enterprise security command aesthetics.
 """
 
@@ -34,29 +34,81 @@ def render_html(html_str: str):
     st.markdown(textwrap.dedent(html_str).strip(), unsafe_allow_html=True)
 
 def get_custom_css() -> str:
-    """Returns CSS string injected into the Streamlit dashboard."""
+    """
+    Returns high-density SOC command center stylesheet.
+    Mimics CrowdStrike Falcon, Splunk ES, and Palo Alto Cortex XSOAR.
+    """
     return """
 <style>
-    /* Google Fonts Import for high-precision cyber & display typography */
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    /* 1. High-Density Enterprise Typography */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #E2E8F0;
     }
 
-    /* Tabular numeric alignment for timestamps, metrics, coordinates */
+    code, kbd, samp, pre, .font-mono {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
     .tabular-nums {
         font-variant-numeric: tabular-nums;
+        font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Command Center Top Header */
+    /* 2. Streamlit Root Canvas Overrides (Pure Tactical Dark) */
+    .stApp {
+        background-color: #080C14 !important;
+    }
+
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0B101C !important;
+        border-right: 1px solid #1A2338 !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p {
+        color: #94A3B8;
+        font-size: 0.85rem;
+    }
+
+    /* 3. Streamlit Button Overrides (Tactical Hardware Switch Aesthetics) */
+    div[data-testid="stButton"] button {
+        background: #0E1626 !important;
+        border: 1px solid #1E293B !important;
+        border-radius: 6px !important;
+        color: #94A3B8 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        padding: 9px 12px !important;
+        transition: all 0.15s ease-in-out !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+        text-align: left !important;
+    }
+
+    div[data-testid="stButton"] button:hover {
+        background: #162138 !important;
+        border-color: #38BDF8 !important;
+        color: #F8FAFC !important;
+    }
+
+    /* Active Incident Button Highlight: Deep Midnight Navy + Electric Cyan Accent */
+    div[data-testid="stButton"] button[kind="primary"] {
+        background: #0C1E38 !important;
+        border: 1px solid #38BDF8 !important;
+        color: #38BDF8 !important;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25) !important;
+    }
+
+    /* 4. Top SOC Navigation & Command Ribbon */
     .command-header {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.85) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 18px 24px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        background: #0B111F;
+        border: 1px solid #1E293B;
+        border-radius: 8px;
+        padding: 14px 20px;
+        margin-bottom: 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -65,243 +117,346 @@ def get_custom_css() -> str:
     }
 
     .brand-title {
-        font-size: 1.45rem;
+        font-size: 1.15rem;
         font-weight: 800;
-        letter-spacing: -0.02em;
+        letter-spacing: 0.04em;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         color: #F8FAFC;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .brand-subtitle {
-        font-size: 0.82rem;
-        color: #94A3B8;
+        font-size: 0.76rem;
+        color: #64748B;
         font-weight: 500;
-        margin-top: 3px;
-        letter-spacing: 0.01em;
+        margin-top: 2px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Freshness & Situational Awareness Bar */
+    .soc-status-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .radar-pulse {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 4px 11px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #10B981;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.04em;
+    }
+
+    .pulse-dot {
+        width: 6px;
+        height: 6px;
+        background-color: #10B981;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+        animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+
+    @keyframes pulse-ring {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+        70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .mitre-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: #111827;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #F87171;
+        padding: 4px 10px;
+        border-radius: 4px;
+        letter-spacing: 0.03em;
+    }
+
+    /* 5. Situational Awareness & Telemetry Meta Bar */
     .freshness-strip {
-        background: rgba(15, 23, 42, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 8px;
-        padding: 8px 16px;
-        margin-bottom: 16px;
+        background: #0B101D;
+        border: 1px solid #1A2338;
+        border-radius: 6px;
+        padding: 6px 14px;
+        margin-bottom: 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
-        font-size: 0.78rem;
-        color: #94A3B8;
+        font-size: 0.74rem;
+        color: #64748B;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .freshness-indicator {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        color: #10B981;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+        color: #38BDF8;
+        font-weight: 600;
     }
 
-    /* Live Surveillance Radar Pulse */
-    .radar-pulse {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(16, 185, 129, 0.12);
-        border: 1px solid rgba(16, 185, 129, 0.35);
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #10B981;
-        letter-spacing: 0.04em;
-    }
-
-    .pulse-dot {
-        width: 8px;
-        height: 8px;
-        background-color: #10B981;
-        border-radius: 50%;
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-        animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
-    }
-
-    @keyframes pulse-ring {
-        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-
-    /* Partner Badge Group */
-    .partner-badges {
+    /* 6. Section Labels */
+    .panel-header {
         display: flex;
         align-items: center;
         gap: 8px;
-    }
-
-    .partner-pill {
-        font-size: 0.72rem;
+        font-size: 0.82rem;
         font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 6px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-    }
-
-    .pill-gdex {
-        background: rgba(229, 57, 53, 0.15);
-        color: #FF6B6B;
-        border: 1px solid rgba(229, 57, 53, 0.3);
-    }
-
-    .pill-anon {
-        background: rgba(99, 102, 241, 0.15);
-        color: #A5B4FC;
-        border: 1px solid rgba(99, 102, 241, 0.3);
-    }
-
-    .pill-utar {
-        background: rgba(245, 158, 11, 0.15);
-        color: #FCD34D;
-        border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-
-    /* MITRE ATT&CK Classification Badge */
-    .mitre-badge {
+        color: #94A3B8;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        font-weight: 700;
-        background: rgba(15, 23, 42, 0.9);
-        border: 1px solid rgba(239, 68, 68, 0.4);
-        color: #F87171;
-        padding: 3px 8px;
-        border-radius: 4px;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #1E293B;
     }
 
-    /* Cyber KPI Metric Cards */
+    /* 7. Unified SOC Telemetry Ribbon (Replacing Rainbow Cards) */
     .kpi-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-        margin-bottom: 20px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0;
+        background: #0B111E;
+        border: 1px solid #1E293B;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        overflow: hidden;
+    }
+
+    @media (max-width: 900px) {
+        .kpi-container {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 
     .cyber-kpi {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.7) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 10px;
-        padding: 14px 16px;
-        position: relative;
-        overflow: hidden;
-        transition: transform 0.2s ease, border-color 0.2s ease;
+        padding: 12px 16px;
+        border-right: 1px solid #1E293B;
+        background: transparent;
     }
 
-    .cyber-kpi:hover {
-        transform: translateY(-2px);
-        border-color: rgba(255, 255, 255, 0.18);
+    .cyber-kpi:last-child {
+        border-right: none;
     }
-
-    .cyber-kpi::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #38BDF8, #818CF8);
-    }
-
-    .kpi-emerald::before { background: linear-gradient(90deg, #10B981, #34D399); }
-    .kpi-amber::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
-    .kpi-crimson::before { background: linear-gradient(90deg, #EF4444, #F87171); }
-    .kpi-cyan::before { background: linear-gradient(90deg, #06B6D4, #38BDF8); }
-    .kpi-purple::before { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
 
     .kpi-label {
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.68rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #94A3B8;
-        margin-bottom: 6px;
+        letter-spacing: 0.06em;
+        color: #64748B;
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 4px;
     }
 
     .kpi-value {
-        font-size: 1.45rem;
+        font-size: 1.28rem;
         font-weight: 800;
         color: #F8FAFC;
-        font-variant-numeric: tabular-nums;
+        font-family: 'JetBrains Mono', monospace;
         line-height: 1.1;
     }
 
     .kpi-delta {
-        font-size: 0.75rem;
+        font-size: 0.70rem;
         font-weight: 600;
-        margin-top: 6px;
+        margin-top: 4px;
         display: flex;
         align-items: center;
         gap: 4px;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .delta-green { color: #10B981; }
     .delta-red { color: #EF4444; }
     .delta-amber { color: #F59E0B; }
+    .delta-cyan { color: #38BDF8; }
 
-    /* Tactical Agent Pipeline Cards */
-    .agent-deck {
-        margin-top: 14px;
+    /* 8. Authoritative Security Scorecard */
+    .soc-scorecard {
+        background: #0D1322;
+        border: 1px solid #1E293B;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+
+    .scorecard-header {
         display: flex;
-        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #1A2338;
+        padding-bottom: 8px;
+    }
+
+    .scorecard-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #94A3B8;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .scorecard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 0.78rem;
+    }
+
+    .scorecard-cell {
+        background: #090E19;
+        border: 1px solid #1A2338;
+        border-radius: 4px;
+        padding: 8px 10px;
+    }
+
+    .scorecard-cell-label {
+        font-size: 0.65rem;
+        color: #64748B;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 2px;
+    }
+
+    .scorecard-cell-value {
+        font-weight: 700;
+        color: #F8FAFC;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 9. Actionable Enforcement Banners */
+    .warden-banner {
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: flex-start;
         gap: 12px;
     }
 
+    .banner-freeze {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid #EF4444;
+    }
+
+    .banner-otp {
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid #F59E0B;
+    }
+
+    .banner-clear {
+        background: rgba(16, 185, 129, 0.10);
+        border: 1px solid #10B981;
+    }
+
+    .banner-title {
+        font-size: 0.88rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin-bottom: 2px;
+        font-family: 'JetBrains Mono', monospace;
+        color: #FFFFFF;
+    }
+
+    .banner-desc {
+        font-size: 0.80rem;
+        color: #CBD5E1;
+        line-height: 1.4;
+    }
+
+    /* 10. SOAR Automated Multi-Agent Pipeline Timeline */
+    .soar-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+        margin-bottom: 12px;
+    }
+
+    .soar-step {
+        background: #0B101D;
+        border: 1px solid #1A2338;
+        border-radius: 6px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .soar-step-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .soar-step-id {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #F8FAFC;
+    }
+
+    .soar-badge-sentinel { color: #38BDF8; }
+    .soar-badge-investigator { color: #818CF8; }
+    .soar-badge-warden { color: #F59E0B; }
+
+    .agent-latency-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        background: #111827;
+        border: 1px solid #1F2937;
+        padding: 2px 7px;
+        border-radius: 3px;
+        color: #94A3B8;
+    }
+
+    .soar-step-body {
+        font-size: 0.80rem;
+        color: #94A3B8;
+        line-height: 1.45;
+    }
+
+    /* Backwards compatibility for agent-card */
     .agent-card {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.6) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 16px 20px;
-        position: relative;
-        transition: all 0.25s ease;
+        background: #0B101D;
+        border: 1px solid #1A2338;
+        border-radius: 6px;
+        padding: 12px 14px;
+        margin-bottom: 8px;
     }
 
-    .agent-card-sentinel {
-        border-left: 4px solid #06B6D4;
-        background: linear-gradient(135deg, rgba(6, 182, 212, 0.07) 0%, rgba(15, 23, 42, 0.6) 100%);
-    }
-
-    .agent-card-investigator {
-        border-left: 4px solid #8B5CF6;
-        background: linear-gradient(135deg, rgba(139, 92, 246, 0.07) 0%, rgba(15, 23, 42, 0.6) 100%);
-    }
-
-    .agent-card-warden-freeze {
-        border-left: 4px solid #EF4444;
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(15, 23, 42, 0.7) 100%);
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.12);
-    }
-
-    .agent-card-warden-otp {
-        border-left: 4px solid #F59E0B;
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.09) 0%, rgba(15, 23, 42, 0.7) 100%);
-        box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
-    }
-
-    .agent-card-warden-clear {
-        border-left: 4px solid #10B981;
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%);
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.08);
-    }
+    .agent-card-sentinel { border-left: 3px solid #38BDF8; }
+    .agent-card-investigator { border-left: 3px solid #818CF8; }
+    .agent-card-warden-freeze { border-left: 3px solid #EF4444; }
+    .agent-card-warden-otp { border-left: 3px solid #F59E0B; }
+    .agent-card-warden-clear { border-left: 3px solid #10B981; }
 
     .agent-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
 
     .agent-name-badge {
@@ -309,123 +464,41 @@ def get_custom_css() -> str:
         align-items: center;
         gap: 8px;
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         color: #F8FAFC;
-    }
-
-    .agent-latency-badge {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 2px 8px;
-        border-radius: 4px;
-        color: #94A3B8;
     }
 
     .agent-body {
-        font-size: 0.88rem;
-        line-height: 1.55;
+        font-size: 0.80rem;
+        line-height: 1.45;
         color: #CBD5E1;
     }
 
-    /* Risk & Enforcement Banners */
-    .warden-banner {
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
-    }
-
-    .banner-freeze {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(185, 28, 28, 0.15) 100%);
-        border: 1px solid #EF4444;
-        box-shadow: 0 0 25px rgba(239, 68, 68, 0.2);
-    }
-
-    .banner-otp {
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(180, 83, 9, 0.15) 100%);
-        border: 1px solid #F59E0B;
-        box-shadow: 0 0 20px rgba(245, 158, 11, 0.18);
-    }
-
-    .banner-clear {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(4, 120, 87, 0.12) 100%);
-        border: 1px solid #10B981;
-        box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
-    }
-
-    .banner-title {
-        font-size: 0.98rem;
-        font-weight: 800;
-        letter-spacing: -0.01em;
-        margin-bottom: 4px;
-        color: #FFFFFF;
-    }
-
-    .banner-desc {
-        font-size: 0.85rem;
-        color: #E2E8F0;
-        line-height: 1.45;
-    }
-
-    /* Human-in-the-Loop Override Panel */
-    .override-panel {
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin-top: 14px;
-    }
-
-    .override-header {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #E2E8F0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 6px;
-    }
-
-    /* Cryptographic Hash Badge */
-    .hash-badge {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.76rem;
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        color: #38BDF8;
-        padding: 3px 8px;
-        border-radius: 4px;
-        word-break: break-all;
-    }
-
-    /* Courier Mobile Handset Mockup */
+    /* 11. Courier Mobile Handset Mockup */
     .handset-container {
-        background: #090D16;
-        border: 2px solid #334155;
-        border-radius: 28px;
-        padding: 14px;
-        max-width: 320px;
+        background: #060911;
+        border: 2px solid #1E293B;
+        border-radius: 20px;
+        padding: 10px;
+        max-width: 300px;
         margin: 0 auto;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
     }
 
     .handset-notch {
-        width: 100px;
-        height: 14px;
-        background: #1E293B;
-        border-radius: 8px;
-        margin: 0 auto 10px auto;
+        width: 80px;
+        height: 10px;
+        background: #111827;
+        border-radius: 6px;
+        margin: 0 auto 8px auto;
     }
 
     .handset-screen {
-        background: #111827;
-        border-radius: 18px;
-        padding: 16px 14px;
-        min-height: 380px;
+        background: #0B101D;
+        border-radius: 12px;
+        padding: 12px;
+        min-height: 340px;
         color: #F8FAFC;
         display: flex;
         flex-direction: column;
@@ -436,74 +509,59 @@ def get_custom_css() -> str:
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 0.7rem;
-        color: #94A3B8;
-        margin-bottom: 12px;
-        font-weight: 600;
+        font-size: 0.68rem;
+        color: #64748B;
+        margin-bottom: 10px;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .handset-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
+        background: #111827;
+        border: 1px solid #1F2937;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 8px;
     }
 
     .handset-action-btn {
         width: 100%;
-        padding: 10px;
-        border-radius: 8px;
+        padding: 8px;
+        border-radius: 6px;
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.80rem;
         text-align: center;
         border: none;
-        cursor: pointer;
+        font-family: 'JetBrains Mono', monospace;
     }
 
-    .btn-handset-success {
-        background: #10B981;
-        color: #FFFFFF;
+    .btn-handset-success { background: #10B981; color: #FFFFFF; }
+    .btn-handset-freeze { background: #EF4444; color: #FFFFFF; }
+    .btn-handset-otp { background: #F59E0B; color: #FFFFFF; }
+
+    /* 12. Cryptographic Hash Badge */
+    .hash-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        background: #090D18;
+        border: 1px solid #1E293B;
+        color: #38BDF8;
+        padding: 2px 7px;
+        border-radius: 3px;
+        word-break: break-all;
     }
 
-    .btn-handset-freeze {
-        background: #EF4444;
-        color: #FFFFFF;
-        cursor: not-allowed;
-    }
-
-    .btn-handset-otp {
-        background: #F59E0B;
-        color: #FFFFFF;
-    }
-
-    /* Streamlit overrides for seamless clean dark aesthetics */
-    div[data-testid="stMetricValue"] {
-        font-variant-numeric: tabular-nums;
-    }
-
-    /* Clean tab styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: rgba(15, 23, 42, 0.5);
-        border-radius: 8px;
-        padding: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        padding: 8px 16px;
+    /* 13. Dataframe Overrides */
+    div[data-testid="stDataFrame"] {
+        border: 1px solid #1E293B;
         border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.82rem;
-        color: #94A3B8;
-        border: none;
+        overflow: hidden;
     }
 
-    .stTabs [aria-selected="true"] {
-        background: rgba(30, 41, 59, 0.9) !important;
-        color: #F8FAFC !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    /* Expander styling */
+    div[data-testid="stExpander"] {
+        background: #0B101D;
+        border: 1px solid #1E293B;
+        border-radius: 6px;
     }
 </style>
 """
