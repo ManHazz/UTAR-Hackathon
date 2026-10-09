@@ -1,0 +1,68 @@
+{
+  "scenario_id": "SCN-FRAUD-GPS-02",
+  "scenario_name": "GPS Teleportation Spoofing (Phantom Courier)",
+  "threat_level": "CRITICAL",
+  "shipment_id": "GDX-SHP-20261003-042",
+  "courier_id": "GDX-042",
+  "courier_name": "Kevin Tan",
+  "courier_vehicle": "Yamaha NVX 155 (WQL 9021)",
+  "parcel_value_myr": 1850.0,
+  "parcel_category": "High-Value Consumer Electronics (iPhone 17 Pro)",
+  "recipient_name": "Sarah Lim",
+  "delivery_address": "Unit 18-03, Menara PJX, Persiaran Barat, 46050 Petaling Jaya",
+  "expected_destination": {
+    "lat": 3.1032,
+    "lon": 101.6445,
+    "label": "Menara PJX, Petaling Jaya"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-10-03T14:00:00+08:00",
+      "event_type": "PICKUP",
+      "location": {
+        "lat": 3.0738,
+        "lon": 101.5385,
+        "label": "GDEX Central Hub, Shah Alam"
+      },
+      "speed_kmh": 0,
+      "battery_pct": 82,
+      "cell_tower_id": "MY-U-MOBILE-1092",
+      "note": "Package scanned out for delivery"
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-10-03T14:15:00+08:00",
+      "event_type": "IN_TRANSIT",
+      "location": {
+        "lat": 3.045,
+        "lon": 101.52,
+        "label": "Shah Alam Section 23 Industrial Park"
+      },
+      "speed_kmh": 4,
+      "battery_pct": 79,
+      "cell_tower_id": "MY-U-MOBILE-1092",
+      "note": "Unscheduled stationary delay (11 mins) in industrial warehouse zone"
+    },
+    {
+      "sequence": 3,
+      "timestamp": "2026-10-03T14:17:00+08:00",
+      "event_type": "DELIVERED",
+      "location": {
+        "lat": 3.1032,
+        "lon": 101.6445,
+        "label": "Menara PJX, Petaling Jaya"
+      },
+      "speed_kmh": 0,
+      "battery_pct": 78,
+      "cell_tower_id": "MY-U-MOBILE-1092",
+      "pod_evidence": {
+        "photo_status": "SUSPICIOUS",
+        "photo_label": "Black screen / obscure angle",
+        "exif_timestamp_match": false,
+        "otp_verified": false
+      },
+      "note": "Courier app forced delivery mark via mock location provider"
+    }
+  ]
+}

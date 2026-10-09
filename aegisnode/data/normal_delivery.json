@@ -1,0 +1,82 @@
+{
+  "scenario_id": "SCN-NORMAL-01",
+  "scenario_name": "Normal Delivery (Happy Path)",
+  "threat_level": "NONE",
+  "shipment_id": "GDX-SHP-20261003-081",
+  "courier_id": "GDX-081",
+  "courier_name": "Muhammad Farhan",
+  "courier_vehicle": "Toyota HiAce (BND 4812)",
+  "parcel_value_myr": 48.5,
+  "parcel_category": "Standard Apparel",
+  "recipient_name": "Ahmad Daniyal",
+  "delivery_address": "No. 42, Jalan SS 2/64, 47300 Petaling Jaya, Selangor",
+  "expected_destination": {
+    "lat": 3.1186,
+    "lon": 101.6214,
+    "label": "Customer Residence, SS2 PJ"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-10-03T09:00:00+08:00",
+      "event_type": "PICKUP",
+      "location": {
+        "lat": 3.0738,
+        "lon": 101.5385,
+        "label": "GDEX Central Hub, Shah Alam"
+      },
+      "speed_kmh": 0,
+      "battery_pct": 98,
+      "cell_tower_id": "MY-MAXIS-4102-1",
+      "note": "Package sorted and scanned into van"
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-10-03T09:18:00+08:00",
+      "event_type": "IN_TRANSIT",
+      "location": {
+        "lat": 3.0912,
+        "lon": 101.5794,
+        "label": "Federal Highway near Batu Tiga"
+      },
+      "speed_kmh": 62,
+      "battery_pct": 94,
+      "cell_tower_id": "MY-MAXIS-4102-4",
+      "note": "Normal transit traffic flow"
+    },
+    {
+      "sequence": 3,
+      "timestamp": "2026-10-03T09:34:00+08:00",
+      "event_type": "IN_TRANSIT",
+      "location": {
+        "lat": 3.107,
+        "lon": 101.603,
+        "label": "LDP Highway Exit (Kelana Jaya)"
+      },
+      "speed_kmh": 45,
+      "battery_pct": 91,
+      "cell_tower_id": "MY-CELCOM-5201-9",
+      "note": "Approaching neighborhood sector"
+    },
+    {
+      "sequence": 4,
+      "timestamp": "2026-10-03T09:46:00+08:00",
+      "event_type": "DELIVERED",
+      "location": {
+        "lat": 3.1186,
+        "lon": 101.6214,
+        "label": "Customer Residence, SS2 PJ"
+      },
+      "speed_kmh": 0,
+      "battery_pct": 89,
+      "cell_tower_id": "MY-CELCOM-5201-2",
+      "pod_evidence": {
+        "photo_status": "VALID",
+        "photo_label": "Front Gate with Parcel Box",
+        "exif_timestamp_match": true,
+        "otp_verified": true
+      },
+      "note": "Recipient acknowledged delivery"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "scenario_id": "SCN-FRAUD-POD-03",
+  "scenario_name": "POD Photo Forgery / Recycled Proof Attack",
+  "threat_level": "HIGH",
+  "shipment_id": "GDX-SHP-20261003-109",
+  "courier_id": "GDX-109",
+  "courier_name": "Ravi Kumar",
+  "courier_vehicle": "Isuzu D-Max (VEE 7711)",
+  "parcel_value_myr": 720.0,
+  "parcel_category": "Designer Cosmetics & Perfumes",
+  "recipient_name": "Nurul Huda",
+  "delivery_address": "No. 15, Jalan Maarof, Bangsar, 59100 Kuala Lumpur",
+  "expected_destination": {
+    "lat": 3.1319,
+    "lon": 101.6705,
+    "label": "Bangsar Residence, KL"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-10-03T16:20:00+08:00",
+      "event_type": "IN_TRANSIT",
+      "location": {
+        "lat": 3.125,
+        "lon": 101.662,
+        "label": "Jalan Bangsar Approach"
+      },
+      "speed_kmh": 32,
+      "battery_pct": 65,
+      "cell_tower_id": "MY-DIGI-3301-1",
+      "note": "Courier enters Bangsar delivery sector"
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-10-03T16:28:00+08:00",
+      "event_type": "DELIVERED",
+      "location": {
+        "lat": 3.1319,
+        "lon": 101.6705,
+        "label": "Bangsar Residence, KL"
+      },
+      "speed_kmh": 0,
+      "battery_pct": 63,
+      "cell_tower_id": "MY-DIGI-3301-3",
+      "pod_evidence": {
+        "photo_status": "FORGED",
+        "photo_label": "Car floor mat & recycled delivery thumbnail",
+        "vision_anomaly_score": 0.88,
+        "exif_camera_model": "Screenshot_Android_14",
+        "otp_verified": false
+      },
+      "note": "Physical GPS coordinates match, but visual proof is synthetic/fraudulent"
+    }
+  ]
+}
