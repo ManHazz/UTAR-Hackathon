@@ -4,7 +4,7 @@ Unit and integration tests for AegisNode Multi-Agent system
 
 import json
 from pathlib import Path
-from aegisnode.agents.ledger import AuditLedger
+from aegisnode.agents.ledger import AuditLedger, AuditBlock
 from aegisnode.agents.osrm_service import check_route_feasibility, haversine_distance_km
 from aegisnode.agents.orchestrator import AegisNodeOrchestrator
 
@@ -77,3 +77,68 @@ def test_api_scraping_detection_pipeline():
 
     assert result["sentinel"]["status"] == "FLAGGED"
     assert result["warden"]["action"] == "API_CREDENTIAL_REVOKED"
+
+def test_tiered_cargo_multipliers():
+    from aegisnode.agents.investigator_agent import InvestigatorAgent
+    investigator = InvestigatorAgent()
+
+    # Tier 1: Low-value doc
+    res_low = investigator.investigate(
+        {"events": [], "parcel_value_myr": 50.0},
+        {"cell_tower_spoof_detected": False}
+    )
+    assert res_low["penalties"]["cargo_multiplier"] == 1.00
+
+    # Tier 2: General merchandise
+    res_med = investigator.investigate(
+        {"events": [], "parcel_value_myr": 450.0},
+        {"cell_tower_spoof_detected": False}
+    )
+    assert res_med["penalties"]["cargo_multiplier"] == 1.15
+
+    # Tier 3: High-value consumer electronics
+    res_high = investigator.investigate(
+        {"events": [], "parcel_value_myr": 2500.0},
+        {"cell_tower_spoof_detected": False}
+    )
+    assert res_high["penalties"]["cargo_multiplier"] == 1.35
+
+def test_sentinel_json_contract():
+    from aegisnode.agents.sentinel_agent import SentinelAgent
+    sentinel = SentinelAgent()
+
+    with open(DATA_DIR / "fraud_gps_spoof.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    report = sentinel.scan_telemetry(data)
+    assert "primary_trigger" in report
+    assert report["primary_trigger"] == "MOCK_LOCATION_SPOOF"
+    assert "cell_tower_locked" in report
+    assert report["cell_tower_locked"] is True
+
+def test_ledger_tamper_rejection():
+    ledger = AuditLedger()
+    b1 = ledger.record("Agent1", "ACTION_1", "ID-1", {"val": 100})
+    b2 = ledger.record("Agent2", "ACTION_2", "ID-2", {"val": 200})
+
+    # Legitimate state is valid
+    assert ledger.verify_integrity()["valid"] is True
+
+    # Tamper with block #1
+    tampered_block = AuditBlock(
+        index=b1.index,
+        timestamp=b1.timestamp,
+        agent=b1.agent,
+        action=b1.action,
+        target_id=b1.target_id,
+        details={"val": 9999}, # Malicious modification
+        prev_hash=b1.prev_hash,
+        block_hash=b1.block_hash
+    )
+    ledger.chain[1] = tampered_block
+
+    # Integrity verification must catch tampering
+    verification = ledger.verify_integrity()
+    assert verification["valid"] is False
+    assert verification["tampered_at_index"] == 1
+

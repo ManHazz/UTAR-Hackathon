@@ -81,14 +81,27 @@ class SentinelAgent:
                     f"POD INTEGRITY ALERT: Proof-of-Delivery flagged as {pod['photo_status']} ({pod.get('photo_label')})."
                 )
 
+        # Determine primary trigger based on anomaly flags
+        primary_trigger = "NONE"
+        if cell_tower_suspicion:
+            primary_trigger = "MOCK_LOCATION_SPOOF"
+        elif highest_velocity_kmh > 120.0:
+            primary_trigger = "IMPOSSIBLE_VELOCITY"
+        elif pod_flagged:
+            primary_trigger = "POD_INTEGRITY_ALERT"
+        elif dwell_suspicion:
+            primary_trigger = "HIGH_RISK_DWELL"
+
         report = {
             "agent": "SentinelAgent",
             "status": "FLAGGED" if anomalies_detected else "CLEAR",
             "anomalies_detected": anomalies_detected,
+            "primary_trigger": primary_trigger,
             "shipment_id": scenario_data.get("shipment_id", "UNKNOWN"),
             "courier_id": scenario_data.get("courier_id", "UNKNOWN"),
             "highest_velocity_kmh": round(highest_velocity_kmh, 1),
             "cell_tower_spoof_detected": cell_tower_suspicion,
+            "cell_tower_locked": cell_tower_suspicion,
             "dwell_anomaly_detected": dwell_suspicion,
             "pod_anomaly_detected": pod_flagged,
             "flags": flags,

@@ -37,10 +37,14 @@ class InvestigatorAgent:
         kinematic_penalty = 0
         telematics_penalty = 0
         pod_penalty = 0
-        value_risk_multiplier = 1.0
 
+        # Tiered Cargo Value Risk Multiplier based on proposal specifications
         if parcel_value > 1000.0:
-            value_risk_multiplier = 1.35  # Escalated penalty for high-value cargo (e.g. smartphones)
+            value_risk_multiplier = 1.35  # High-value consumer tech (> RM 1,000)
+        elif parcel_value > 100.0:
+            value_risk_multiplier = 1.15  # General merchandise (RM 101 - RM 1,000)
+        else:
+            value_risk_multiplier = 1.00  # Standard documents & low-value (<= RM 100)
 
         # 1. Investigate Route Segments via OSRM
         for i in range(1, len(events)):
@@ -103,7 +107,7 @@ class InvestigatorAgent:
         if scenario_data.get("scenario_id") == "SCN-FRAUD-GPS-02":
             trust_score = 18  # Exact benchmark specified in hackathon pitch script
         else:
-            raw_deduction = (kinematic_penalty * 0.7) + (telematics_penalty * 0.6) + (pod_penalty * 0.8)
+            raw_deduction = ((kinematic_penalty * 0.7) + (telematics_penalty * 0.6) + (pod_penalty * 0.8)) * value_risk_multiplier
             trust_score = max(5, min(100, int(100 - raw_deduction)))
 
         # Synthesize Agent Narrative
@@ -134,6 +138,7 @@ class InvestigatorAgent:
                 "kinematic_road_violation": kinematic_penalty,
                 "telematics_spoof": telematics_penalty,
                 "pod_forgery": pod_penalty,
+                "cargo_multiplier": value_risk_multiplier,
                 "value_multiplier": value_risk_multiplier
             },
             "forensic_narrative": " | ".join(narrative_parts)

@@ -263,6 +263,15 @@ with left_col:
         # OSRM Road Physics Feasibility Chart
         route_evals = investigator.get("route_evaluations", [])
         if route_evals:
+            source_engine = route_evals[0].get("source", "LIVE_OSRM")
+            source_badge_color = "#38BDF8" if source_engine == "LIVE_OSRM" else ("#F59E0B" if source_engine == "PREBAKED_CACHE" else "#A855F7")
+            source_badge_text = "ENGINE: LIVE OPENSTREETMAP OSRM" if source_engine == "LIVE_OSRM" else ("ENGINE: KLANG VALLEY GRAPH (CACHE)" if source_engine == "PREBAKED_CACHE" else "ENGINE: HAVERSINE TORTUOSITY PHYSICS")
+            render_html(f"""
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; margin-bottom:4px;">
+                <span style="font-size:11px; color:#94A3B8; font-weight:600;">ROAD GRAPH FEASIBILITY</span>
+                <span style="font-size:10px; font-weight:700; color:{source_badge_color}; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-family:'JetBrains Mono', monospace;">[{source_badge_text}]</span>
+            </div>
+            """)
             st.plotly_chart(build_route_feasibility_chart(route_evals), use_container_width=True)
 
         # Check for POD evidence
@@ -350,7 +359,8 @@ with right_col:
         if "highest_velocity_kmh" in sentinel and sentinel["highest_velocity_kmh"] > 0:
             st.write(f"**Peak Speed:** `{sentinel['highest_velocity_kmh']:.0f} km/h`")
         if "parcel_value_myr" in scenario_data:
-            st.write(f"**Cargo at Risk:** `RM {scenario_data['parcel_value_myr']:.2f}`")
+            cargo_mult = investigator.get("penalties", {}).get("cargo_multiplier", 1.0)
+            st.write(f"**Cargo at Risk:** `RM {scenario_data['parcel_value_myr']:.2f}` (Risk Tier: `{cargo_mult:.2f}x`)")
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Forensic Penalty Deduction Breakdown Chart
