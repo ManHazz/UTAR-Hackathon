@@ -26,6 +26,8 @@ PREBAKED_ROUTES = {
     "3.1070,101.6030->3.1186,101.6214": {"distance_km": 3.2, "duration_seconds": 420},
     # Bangsar Approach to Bangsar Residence (~1.8 km, ~4 mins)
     "3.1250,101.6620->3.1319,101.6705": {"distance_km": 1.8, "duration_seconds": 240},
+    # Central Hub to Section 23 Industrial (~3.8 km, ~6 mins)
+    "3.0738,101.5385->3.0450,101.5200": {"distance_km": 3.8, "duration_seconds": 360},
 }
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -47,11 +49,12 @@ def check_route_feasibility(
     lon1: float,
     lat2: float,
     lon2: float,
-    timeout_sec: float = 3.0
+    timeout_sec: float = 1.0
 ) -> Dict[str, Any]:
     """
     Queries OpenStreetMap OSRM routing engine to determine realistic driving travel time,
-    distance, and road coordinate geometry. Falls back gracefully to pre-baked demo cache or physics.
+    distance, and road coordinate geometry. Prioritizes local pre-baked cache for instant,
+    fail-safe zero-latency evaluation.
     """
     route_key = f"{lat1:.4f},{lon1:.4f}->{lat2:.4f},{lon2:.4f}"
     
@@ -59,7 +62,20 @@ def check_route_feasibility(
     if route_key in _ROUTE_CACHE:
         return _ROUTE_CACHE[route_key]
 
-    # 1. Try Live Public OSRM API (100% Free, no API key needed)
+    # 1. Check Pre-baked Cache for Instant Zero-Latency Reliability
+    if route_key in PREBAKED_ROUTES:
+        cached = PREBAKED_ROUTES[route_key]
+        res = {
+            "distance_km": cached["distance_km"],
+            "duration_seconds": cached["duration_seconds"],
+            "duration_minutes": round(cached["duration_seconds"] / 60.0, 1),
+            "geometry": [[lat1, lon1], [lat2, lon2]],
+            "source": "PREBAKED_CACHE"
+        }
+        _ROUTE_CACHE[route_key] = res
+        return res
+
+    # 2. Try Live Public OSRM API with strict 1.0s timeout
     try:
         url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
         resp = requests.get(url, timeout=timeout_sec)
@@ -80,18 +96,7 @@ def check_route_feasibility(
                 _ROUTE_CACHE[route_key] = res
                 return res
     except Exception as e:
-        logger.warning(f"OSRM live request failed: {e}. Falling back to cache/physics.")
-
-    # 2. Check Pre-baked Cache for Demo Reliability
-    if route_key in PREBAKED_ROUTES:
-        cached = PREBAKED_ROUTES[route_key]
-        return {
-            "distance_km": cached["distance_km"],
-            "duration_seconds": cached["duration_seconds"],
-            "duration_minutes": round(cached["duration_seconds"] / 60.0, 1),
-            "geometry": [[lat1, lon1], [lat2, lon2]],
-            "source": "PREBAKED_CACHE"
-        }
+        logger.warning(f"OSRM live request skipped: {e}. Falling back to physics.")
 
     # 3. Physics-based fallback (Assumes 40 km/h average Klang Valley city speed with 1.35x road winding factor)
     haversine_km = haversine_distance_km(lat1, lon1, lat2, lon2)
