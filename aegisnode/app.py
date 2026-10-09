@@ -75,6 +75,16 @@ if "supervisor_action" not in st.session_state:
 if "otp_cleared" not in st.session_state:
     st.session_state.otp_cleared = False
 
+def select_scenario(filename: str):
+    """Synchronizes active scenario file and sidebar selectbox widget key."""
+    st.session_state.active_scenario_file = filename
+    st.session_state.otp_cleared = False
+    st.session_state.supervisor_action = None
+    for label, fn in SCENARIO_KEYS.items():
+        if fn == filename:
+            st.session_state["scenario_selector"] = label
+            break
+
 # --- SIDEBAR NAVIGATION & CONTROLLER ---
 with st.sidebar:
     shield_svg = get_svg_icon("shield", color="#38BDF8", size=24)
@@ -94,13 +104,22 @@ with st.sidebar:
     file_to_label = {v: k for k, v in label_to_file.items()}
     current_label = file_to_label.get(st.session_state.active_scenario_file, list(label_to_file.keys())[0])
 
+    if "scenario_selector" not in st.session_state:
+        st.session_state["scenario_selector"] = current_label
+
+    def _on_dropdown_scenario_change():
+        chosen_label = st.session_state["scenario_selector"]
+        st.session_state.active_scenario_file = label_to_file[chosen_label]
+        st.session_state.otp_cleared = False
+        st.session_state.supervisor_action = None
+
     selected_label = st.selectbox(
         "Select Live Incident Scenario:",
         list(label_to_file.keys()),
-        index=list(label_to_file.keys()).index(current_label),
-        key="scenario_selector"
+        key="scenario_selector",
+        on_change=_on_dropdown_scenario_change
     )
-    st.session_state.active_scenario_file = label_to_file[selected_label]
+    st.session_state.active_scenario_file = label_to_file[st.session_state["scenario_selector"]]
 
     run_sim = st.button("Run Telemetry Analysis", use_container_width=True, type="primary")
     animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=True, help="Simulates multi-agent scanning latency")
@@ -164,24 +183,47 @@ render_html(f"""
 # --- 1-CLICK QUICK SCENARIO SELECTOR BAR ---
 col_s1, col_s2, col_s3, col_s4 = st.columns(4)
 with col_s1:
-    if st.button("[CRITICAL] 1. GPS Teleportation", use_container_width=True, help="Simulate Phantom Courier mock location jump"):
-        st.session_state.active_scenario_file = "fraud_gps_spoof.json"
-        st.session_state.otp_cleared = False
+    is_active = (st.session_state.active_scenario_file == "fraud_gps_spoof.json")
+    if st.button(
+        "[CRITICAL] 1. GPS Teleportation" + (" [ACTIVE]" if is_active else ""),
+        use_container_width=True,
+        type="primary" if is_active else "secondary",
+        help="Simulate Phantom Courier mock location jump"
+    ):
+        select_scenario("fraud_gps_spoof.json")
         st.rerun()
+
 with col_s2:
-    if st.button("[NOMINAL] 2. Clean Delivery", use_container_width=True, help="Simulate legitimate delivery route"):
-        st.session_state.active_scenario_file = "normal_delivery.json"
-        st.session_state.otp_cleared = False
+    is_active = (st.session_state.active_scenario_file == "normal_delivery.json")
+    if st.button(
+        "[NOMINAL] 2. Clean Delivery" + (" [ACTIVE]" if is_active else ""),
+        use_container_width=True,
+        type="primary" if is_active else "secondary",
+        help="Simulate legitimate delivery route"
+    ):
+        select_scenario("normal_delivery.json")
         st.rerun()
+
 with col_s3:
-    if st.button("[HIGH RISK] 3. Forged POD Photo", use_container_width=True, help="Simulate car floor mat / screenshot POD forgery"):
-        st.session_state.active_scenario_file = "fraud_pod_spoof.json"
-        st.session_state.otp_cleared = False
+    is_active = (st.session_state.active_scenario_file == "fraud_pod_spoof.json")
+    if st.button(
+        "[HIGH RISK] 3. Forged POD Photo" + (" [ACTIVE]" if is_active else ""),
+        use_container_width=True,
+        type="primary" if is_active else "secondary",
+        help="Simulate car floor mat / screenshot POD forgery"
+    ):
+        select_scenario("fraud_pod_spoof.json")
         st.rerun()
+
 with col_s4:
-    if st.button("[CYBER THREAT] 4. API Exfiltration", use_container_width=True, help="Simulate 03:00 AM bulk PII scraping"):
-        st.session_state.active_scenario_file = "fraud_api_scraping.json"
-        st.session_state.otp_cleared = False
+    is_active = (st.session_state.active_scenario_file == "fraud_api_scraping.json")
+    if st.button(
+        "[CYBER THREAT] 4. API Exfiltration" + (" [ACTIVE]" if is_active else ""),
+        use_container_width=True,
+        type="primary" if is_active else "secondary",
+        help="Simulate 03:00 AM bulk PII scraping"
+    ):
+        select_scenario("fraud_api_scraping.json")
         st.rerun()
 
 # --- TOP CYBER KPI SUMMARY CARDS ---
