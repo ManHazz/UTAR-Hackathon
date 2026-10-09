@@ -27,3 +27,6 @@ ehthumbs.db
 # ECC local agent tooling
 .agents/
 AGENTS.md
+
+# Runtime captures
+aegisnode/data/live_pod_capture.jpg

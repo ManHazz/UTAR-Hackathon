@@ -1,22 +1,91 @@
 """
 AegisNode - Proof-of-Delivery (POD) Visual Forensics Inspector
-Examines courier uploaded photos, AI vision anomaly scores, and EXIF metadata.
+Examines courier uploaded photos, live camera captures from phone, AI vision anomaly scores, and EXIF metadata.
 Enterprise SOC inspection surface - Zero Emojis.
 """
 
 from typing import Dict, Any
+from pathlib import Path
 import streamlit as st
 from aegisnode.ui.styles import get_svg_icon, render_html
+from aegisnode.data.live_bridge import get_live_state
 
 def render_pod_inspector(scenario_data: Dict[str, Any]):
     """
-    Renders an interactive forensic viewfinder and EXIF inspection panel
-    for courier Proof-of-Delivery photos without raw markdown indentation bugs.
+    Renders an interactive forensic viewfinder and EXIF inspection panel.
+    Displays real smartphone camera captures when uploaded via the live mobile bridge.
     """
+    live_state = get_live_state()
+    has_live_capture = live_state.get("has_live_photo", False)
+    live_photo_path = Path(live_state.get("live_photo_path", ""))
+
     events = scenario_data.get("events", [])
     last_event = events[-1] if events else {}
     pod = last_event.get("pod_evidence", {})
 
+    camera_icon = get_svg_icon("camera", color="#38BDF8", size=15)
+    alert_icon = get_svg_icon("alert-triangle", color="#EF4444", size=24)
+    check_icon = get_svg_icon("check-circle", color="#10B981", size=24)
+
+    # 1. If courier uploaded a live photo via smartphone camera
+    if has_live_capture and live_photo_path.exists():
+        status = live_state.get("live_photo_status", "FORGED")
+        variance = live_state.get("live_photo_variance", 14.2)
+        brightness = live_state.get("live_photo_brightness", 40.0)
+        otp_verified = live_state.get("otp_verified", False)
+
+        anomaly_score = 0.92 if status == "FORGED" else 0.05
+        status_bg = "#EF4444" if status == "FORGED" else "#10B981"
+        risk_color = "#EF4444" if status == "FORGED" else "#10B981"
+        camera_model = "Phone Camera (Live Hardware Stream)"
+        otp_color = "#10B981" if otp_verified else "#F59E0B"
+        otp_text = "[OTP VERIFIED]" if otp_verified else "[OTP REQUIRED]"
+
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    {camera_icon}
+                    <span style="font-size: 12px; font-weight: 700; color: #E2E8F0; text-transform:uppercase; letter-spacing:0.05em;">Live Phone Camera POD Forensics</span>
+                </div>
+                <span style="background:{status_bg}; color:white; font-size:10px; font-weight:800; padding:3px 8px; border-radius:4px; font-family:monospace;">
+                    [{status} LIVE CAPTURE]
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Render the actual image captured by the physical phone
+        try:
+            st.image(str(live_photo_path), caption=f"Direct Hardware Photo Stream from Courier Handset (Variance: {variance:.1f} | Brightness: {brightness:.1f})", use_container_width=True)
+        except Exception:
+            pass
+
+        render_html(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: #94A3B8;">Laplacian Variance:</div>
+                    <div style="color: {risk_color}; font-size: 13px; font-weight: 800; margin-top:2px;">{variance:.1f} (Threshold: 55.0)</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: #94A3B8;">Hardware Sensor:</div>
+                    <div style="color: #38BDF8; font-size: 11px; font-family:monospace; font-weight: 700; margin-top:2px;">{camera_model}</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: #94A3B8;">AI Optical Risk:</div>
+                    <div style="color: {risk_color}; font-weight: 700; margin-top:2px;">{anomaly_score*100:.0f}% Risk Index</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: #94A3B8;">Customer Handover OTP:</div>
+                    <div style="color: {otp_color}; font-weight: 700; margin-top:2px;">{otp_text}</div>
+                </div>
+            </div>
+        </div>
+        """)
+        return
+
+    # 2. Standard simulated POD view if no live camera photo has been taken yet
     if not pod:
         st.info("No Proof-of-Delivery photo submitted for this shipment stage.")
         return
@@ -27,11 +96,6 @@ def render_pod_inspector(scenario_data: Dict[str, Any]):
     otp_verified = pod.get("otp_verified", False)
     timestamp_match = pod.get("exif_timestamp_match", status == "VALID")
 
-    camera_icon = get_svg_icon("camera", color="#38BDF8", size=15)
-    alert_icon = get_svg_icon("alert-triangle", color="#EF4444", size=24)
-    check_icon = get_svg_icon("check-circle", color="#10B981", size=24)
-
-    # Styling and preview based on POD validation status
     if status == "FORGED":
         status_bg = "#EF4444"
         image_simulation = f'''<div style="background: radial-gradient(circle, #2D1515 0%, #170A0A 100%); height: 130px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; border: 1px dashed #EF4444; margin-bottom:12px;"><div>{alert_icon}</div><div style="color:#F87171; font-weight:700; font-size:12px; margin-top:6px; letter-spacing:0.04em;">RECYCLED SCREENSHOT DETECTED</div><div style="color:#94A3B8; font-size:11px;">Car floor mat / duplicated thumbnail artifact</div></div>'''
@@ -49,7 +113,6 @@ def render_pod_inspector(scenario_data: Dict[str, Any]):
     otp_color = "#10B981" if otp_verified else "#F59E0B"
     otp_text = "[OTP VERIFIED]" if otp_verified else "[OTP NOT PROVIDED]"
 
-    # Use render_html to guarantee raw clean HTML rendering
     render_html(f"""
 <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">

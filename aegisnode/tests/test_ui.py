@@ -107,4 +107,62 @@ def test_live_bridge_sync():
     # Clean up
     reset_live_state()
 
+def test_phone_hardware_telematics_update():
+    from aegisnode.data.live_bridge import update_courier_telematics, get_live_state, reset_live_state
+    reset_live_state()
+    # Simulate hardware GPS coordinates acquired at UTP Tronoh campus
+    st_update = update_courier_telematics(4.385210, 100.978120, label="UTP Tronoh Campus", accuracy_m=8.5)
+    assert st_update["courier_lat"] == 4.38521
+    assert st_update["courier_lon"] == 100.97812
+    assert "UTP" in st_update["courier_location_label"]
+    assert st_update["courier_accuracy_m"] == 8.5
+    reset_live_state()
+
+def test_gps_spoof_haversine_calculation():
+    from aegisnode.data.live_bridge import trigger_gps_spoof, reset_live_state
+    reset_live_state()
+    # Jump from UTP Campus (4.3852, 100.9781) to Menara PJX (3.1032, 101.6445)
+    res = trigger_gps_spoof(
+        start_lat=4.3852,
+        start_lon=100.9781,
+        target_lat=3.1032,
+        target_lon=101.6445,
+        start_label="UTP Campus",
+        target_label="Menara PJX"
+    )
+    assert res["warden_action"] == "PACKAGE_FREEZE"
+    assert res["trust_score"] == 18
+    # Distance is ~185 km, simulated in 2 minutes -> velocity > 5000 km/h
+    assert res["highest_velocity_kmh"] > 1000.0
+    assert res["spoof_distance_km"] > 150.0
+    reset_live_state()
+
+def test_live_camera_photo_forensic_analysis():
+    import numpy as np
+    import cv2
+    from aegisnode.data.live_bridge import process_uploaded_pod_photo, reset_live_state
+    reset_live_state()
+
+    # 1. Dark floor mat / obstructed sensor test (Low luminance, zero texture)
+    dark_img = np.zeros((200, 200, 3), dtype=np.uint8)
+    _, dark_encoded = cv2.imencode(".jpg", dark_img)
+    res_dark = process_uploaded_pod_photo(dark_encoded.tobytes())
+    assert res_dark["live_photo_status"] == "FORGED"
+    assert res_dark["warden_action"] == "STEP_UP_CHALLENGE"
+    assert res_dark["trust_score"] < 50
+    assert res_dark["has_live_photo"] is True
+
+    # 2. High-contrast, well-lit parcel test (Ambient light > 100, clear edges)
+    bright_img = np.full((200, 200, 3), 180, dtype=np.uint8)
+    cv2.rectangle(bright_img, (20, 20), (180, 180), (30, 30, 30), 3)
+    cv2.putText(bright_img, "GDEX PARCEL #042", (30, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (10, 10, 10), 2)
+    _, bright_encoded = cv2.imencode(".jpg", bright_img)
+    res_bright = process_uploaded_pod_photo(bright_encoded.tobytes())
+    assert res_bright["live_photo_status"] == "VALID"
+    assert res_bright["warden_action"] == "AUTO_CLEAR"
+    assert res_bright["trust_score"] > 90
+
+    reset_live_state()
+
+
 

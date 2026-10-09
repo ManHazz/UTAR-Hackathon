@@ -1,23 +1,33 @@
 """
 AegisNode - Mobile Courier Handset Interface
 Dedicated full-screen mobile smartphone view for physical field demonstrations.
+Acquires real hardware GPS from phone and captures live photos via device camera.
 Zero Emojis - Enterprise Cyber-Physical Security.
 """
 
+from typing import Optional
+from pathlib import Path
 import streamlit as st
-from aegisnode.data.live_bridge import get_live_state, update_courier_action
+
+from aegisnode.data.live_bridge import (
+    get_live_state,
+    update_courier_action,
+    update_courier_telematics,
+    trigger_gps_spoof,
+    process_uploaded_pod_photo,
+    reset_live_state,
+)
 from aegisnode.ui.styles import get_svg_icon, render_html
 
 def render_mobile_courier_view():
     """
     Renders an edge courier handset interface optimized for smartphones.
-    Allows a courier holding a real phone to trigger fraud vectors and receive Warden lockdowns.
+    Zero race conditions: eliminates timed auto-refresh fragments that cause white screen crashes.
     """
-    # Custom high-contrast mobile CSS
     st.markdown("""
     <style>
         .mobile-shell {
-            max-width: 440px;
+            max-width: 480px;
             margin: 0 auto;
             background: #0B0F17;
             border: 1px solid #1E293B;
@@ -54,25 +64,13 @@ def render_mobile_courier_view():
             padding: 12px 14px;
             margin-bottom: 12px;
         }
-        .mobile-btn {
-            display: block;
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 13px;
-            text-align: center;
-            margin-bottom: 10px;
-            cursor: pointer;
-            border: none;
-        }
         .status-box-freeze {
             background: rgba(239, 68, 68, 0.12);
             border: 2px solid #EF4444;
             color: #FCA5A5;
             padding: 14px;
             border-radius: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
         .status-box-challenge {
             background: rgba(245, 158, 11, 0.12);
@@ -80,7 +78,7 @@ def render_mobile_courier_view():
             color: #FCD34D;
             padding: 14px;
             border-radius: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
         .status-box-clear {
             background: rgba(16, 185, 129, 0.12);
@@ -88,16 +86,39 @@ def render_mobile_courier_view():
             color: #6EE7B7;
             padding: 14px;
             border-radius: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+        }
+        .coord-pill {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: #38BDF8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 3px 7px;
+            border-radius: 4px;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    _render_mobile_body()
-
-@st.fragment(run_every="1s")
-def _render_mobile_body():
     state = get_live_state()
+
+    # 1. Check for URL Query Coordinates passed from browser GPS
+    query_lat = st.query_params.get("lat")
+    query_lon = st.query_params.get("lon")
+    if query_lat and query_lon:
+        try:
+            parsed_lat = float(query_lat)
+            parsed_lon = float(query_lon)
+            if abs(parsed_lat - state.get("courier_lat", 0.0)) > 0.0001 or abs(parsed_lon - state.get("courier_lon", 0.0)) > 0.0001:
+                update_courier_telematics(parsed_lat, parsed_lon, label="Phone GPS Hardware Fix")
+                state = get_live_state()
+        except Exception:
+            pass
+
+    cur_lat = state.get("courier_lat", 4.385200)
+    cur_lon = state.get("courier_lon", 100.978100)
+    cur_label = state.get("courier_location_label", "UTP Campus, Tronoh, Perak")
     warden_act = state.get("warden_action", "AUTO_CLEAR")
     velocity = state.get("highest_velocity_kmh", 0.0)
     score = state.get("trust_score", 100)
@@ -113,7 +134,7 @@ def _render_mobile_body():
                 {phone_svg}
                 <span style="font-weight:800; font-size:14px; color:#F8FAFC;">GDEX Courier Go v4.2</span>
             </div>
-            <span class="mobile-badge badge-live">LIVE BRIDGE ACTIVE</span>
+            <span class="mobile-badge badge-live">SOC BRIDGE ACTIVE</span>
         </div>
         <div class="mobile-card">
             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
@@ -121,17 +142,131 @@ def _render_mobile_body():
                 <span style="font-size:12px; font-weight:700; color:#38BDF8; font-family:'JetBrains Mono', monospace;">#GDX-SHP-20261003-042</span>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-size:11px; color:#94A3B8;">DRIVER:</span>
+                <span style="font-size:11px; font-weight:600; color:#F1F5F9;">Ahmad Farhan (Motorcycle)</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                 <span style="font-size:11px; color:#94A3B8;">CARGO:</span>
                 <span style="font-size:11px; font-weight:600; color:#F1F5F9;">iPhone 17 Pro (RM 1,850.00)</span>
             </div>
             <div style="display:flex; justify-content:space-between;">
-                <span style="font-size:11px; color:#94A3B8;">RECIPIENT:</span>
-                <span style="font-size:11px; font-weight:600; color:#F1F5F9;">Sarah Lim (Menara PJX, PJ)</span>
+                <span style="font-size:11px; color:#94A3B8;">DESTINATION:</span>
+                <span style="font-size:11px; font-weight:600; color:#F1F5F9;">Menara PJX, Petaling Jaya</span>
             </div>
         </div>
+    </div>
     """, unsafe_allow_html=True)
 
-    # 1. Real-time Security Latch Status
+    # 2. HARDWARE TELEMATICS & GPS POSITION SENSOR
+    st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 12px 0 6px 0; text-transform:uppercase;'>1. Phone Hardware GPS Telematics:</div>", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div style="background:#111827; border:1px solid #1F2937; border-radius:10px; padding:12px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; color:#94A3B8;">CURRENT POSITION:</span>
+            <span class="coord-pill">{cur_lat:.5f} N, {cur_lon:.5f} E</span>
+        </div>
+        <div style="font-size:12px; font-weight:600; color:#F8FAFC; margin-bottom:8px;">
+            {cur_label}
+        </div>
+        <div style="font-size:10px; color:#64748B;">
+            Hardware baseband: Locked to Cellular Tower #TWR-4921 (Perak)
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Fast 1-click Preset Coordinates
+    col_pos1, col_pos2 = st.columns(2)
+    with col_pos1:
+        if st.button("[LOC] Set: UTP Campus", use_container_width=True, help="Set coordinates to UTP Perak (4.3852, 100.9781)"):
+            update_courier_telematics(4.385200, 100.978100, label="UTP Campus (Tronoh, Perak)")
+            st.rerun()
+    with col_pos2:
+        if st.button("[LOC] Set: Shah Alam Hub", use_container_width=True, help="Set coordinates to Shah Alam Hub (3.0560, 101.5320)"):
+            update_courier_telematics(3.056000, 101.532000, label="Shah Alam Section 23 Hub")
+            st.rerun()
+
+    # Browser Geolocation JS Widget for real GPS acquisition
+    st.components.v1.html("""
+    <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; text-align:center; padding:6px 0;">
+        <button id="gps-btn" onclick="acquireGPS()" style="width:100%; background:#0284C7; color:#FFFFFF; border:none; border-radius:8px; padding:10px 14px; font-size:12px; font-weight:700; cursor:pointer;">
+            [GPS] Acquire Live Phone GPS Fix
+        </button>
+        <div id="gps-status" style="margin-top:6px; font-size:11px; color:#94A3B8;">
+            Tap to query device GPS sensor via browser API
+        </div>
+    </div>
+    <script>
+    function acquireGPS() {
+        var btn = document.getElementById("gps-btn");
+        var st = document.getElementById("gps-status");
+        if (!navigator.geolocation) {
+            st.innerHTML = "<span style='color:#EF4444'>Geolocation not supported by this browser</span>";
+            return;
+        }
+        btn.innerText = "Querying GPS Satellites...";
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                var lat = pos.coords.latitude.toFixed(6);
+                var lon = pos.coords.longitude.toFixed(6);
+                var acc = pos.coords.accuracy.toFixed(1);
+                st.innerHTML = "<span style='color:#10B981; font-weight:700;'>GPS Locked: " + lat + ", " + lon + " (±" + acc + "m)</span>";
+                btn.innerText = "GPS Fix Acquired";
+                try {
+                    var u = new URL(window.parent.location.href);
+                    u.searchParams.set("mode", "courier");
+                    u.searchParams.set("lat", lat);
+                    u.searchParams.set("lon", lon);
+                    window.parent.location.href = u.toString();
+                } catch(e) {}
+            },
+            function(err) {
+                btn.innerText = "Retry GPS Query";
+                st.innerHTML = "<span style='color:#F59E0B'>GPS prompt: " + err.message + "</span>";
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    }
+    </script>
+    """, height=85)
+
+    # 3. LIVE PROOF-OF-DELIVERY (POD) PHOTO CAPTURE
+    st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 10px 0 6px 0; text-transform:uppercase;'>2. Live Optical POD Verification:</div>", unsafe_allow_html=True)
+    
+    camera_pic = st.camera_input("Snap Live POD Photo with Phone Camera", label_visibility="collapsed")
+    if camera_pic is not None:
+        pic_bytes = camera_pic.getvalue()
+        process_uploaded_pod_photo(pic_bytes)
+        st.success("POD photo transmitted to SOC command center.")
+
+    # Alternative file uploader for testing photos
+    with st.expander("Or select image file from gallery", expanded=False):
+        uploaded_file = st.file_uploader("Upload POD Image", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
+        if uploaded_file is not None:
+            pic_bytes = uploaded_file.getvalue()
+            process_uploaded_pod_photo(pic_bytes)
+            st.success("Uploaded photo transmitted to SOC.")
+
+    # If photo exists, show forensic summary
+    if state.get("has_live_photo"):
+        photo_status = state.get("live_photo_status", "VALID")
+        var_score = state.get("live_photo_variance", 0.0)
+        badge_col = "#EF4444" if photo_status == "FORGED" else "#10B981"
+        st.markdown(f"""
+        <div style="background:#111827; border:1px solid #1F2937; border-radius:8px; padding:8px 12px; margin-bottom:12px; font-size:11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#94A3B8;">OPTICAL FORENSIC STATUS:</span>
+                <span style="color:{badge_col}; font-weight:800;">[{photo_status}]</span>
+            </div>
+            <div style="color:#F1F5F9; margin-top:3px;">
+                Laplacian Edge Variance: <b>{var_score:.1f}</b> (Threshold: 55.0)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 4. REAL-TIME WARDEN POLICY LATCH STATUS
+    st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 10px 0 6px 0; text-transform:uppercase;'>3. Terminal Security Latch:</div>", unsafe_allow_html=True)
+
     if warden_act == "PACKAGE_FREEZE":
         st.markdown(f"""
         <div class="status-box-freeze">
@@ -153,7 +288,7 @@ def _render_mobile_body():
                 [SECURITY CHALLENGE] CUSTOMER OTP REQUIRED
             </div>
             <div style="font-size:12px; line-height:1.5;">
-                Proof-of-delivery photo flagged as synthetic/recycled.
+                Proof-of-delivery photo flagged as synthetic/floor mat.
                 <br><b>Trust Score: {score}/100</b>
                 <br>Obtain the 6-digit verification code sent to customer Sarah Lim.
             </div>
@@ -181,34 +316,37 @@ def _render_mobile_body():
         </div>
         """, unsafe_allow_html=True)
 
-    # 2. Interactive Field Attack Triggers
-    st.markdown("<div style='font-size:11px; font-weight:700; color:#64748B; margin: 12px 0 8px 0; text-transform:uppercase;'>Simulate Field Operations:</div>", unsafe_allow_html=True)
+    # 5. LIVE DEMO CONTROLLERS (ALL 4 SCENARIOS)
+    st.markdown("<div style='font-size:11px; font-weight:700; color:#64748B; margin: 12px 0 8px 0; text-transform:uppercase;'>Trigger Live Incidents:</div>", unsafe_allow_html=True)
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        if st.button("Simulate Mock GPS Spoof", type="secondary", use_container_width=True, help="Teleport 15 km in 2 mins"):
-            update_courier_action("TRIGGER_GPS_SPOOF", "fraud_gps_spoof.json")
+        if st.button("Simulate GPS Spoof", type="secondary", use_container_width=True, help="Teleport from current position to Menara PJX"):
+            trigger_gps_spoof(start_lat=cur_lat, start_lon=cur_lon)
             st.rerun()
 
     with col_btn2:
-        if st.button("Upload Fake POD Photo", type="secondary", use_container_width=True, help="Submit car floor mat photo"):
+        if st.button("Simulate Floor POD", type="secondary", use_container_width=True, help="Simulate dark car floor mat POD"):
             update_courier_action("TRIGGER_POD_FORGERY", "fraud_pod_spoof.json")
             st.rerun()
 
     col_btn3, col_btn4 = st.columns(2)
     with col_btn3:
-        if st.button("Complete Clean Delivery", type="primary", use_container_width=True, help="Legitimate dropoff"):
+        if st.button("Submit Clean Delivery", type="primary", use_container_width=True, help="Legitimate handover"):
             update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
             st.rerun()
 
     with col_btn4:
-        if st.button("Reset Session", use_container_width=True, help="Reset handset and SOC bridge"):
-            update_courier_action("STANDBY", "normal_delivery.json")
+        if st.button("Reset Terminal", use_container_width=True, help="Reset to nominal state"):
+            reset_live_state()
             st.rerun()
+
+    # Manual Status Refresh Button
+    if st.button("Refresh Terminal Status", use_container_width=True, help="Poll current Warden latch status"):
+        st.rerun()
 
     st.markdown("""
         <div style="text-align:center; margin-top:14px; font-size:10px; color:#64748B; font-family:'JetBrains Mono', monospace;">
-            AegisNode Edge Daemon Polling: 1.0s | GDEX Secure Net
+            AegisNode Edge Daemon | Direct Cyber-Physical Bridge
         </div>
-    </div>
     """, unsafe_allow_html=True)

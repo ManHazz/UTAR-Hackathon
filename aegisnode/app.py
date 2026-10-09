@@ -110,12 +110,22 @@ with st.sidebar:
     </div>
     """)
 
-    render_html("""
+    bridge_status_data = get_live_state()
+    side_lat = bridge_status_data.get("courier_lat", 4.3852)
+    side_lon = bridge_status_data.get("courier_lon", 100.9781)
+    side_label = bridge_status_data.get("courier_location_label", "UTP Campus, Perak")
+    side_action = bridge_status_data.get("courier_action", "STANDBY")
+
+    render_html(f"""
     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-weight: 700; color: #10B981;">LIVE PHONE BRIDGE</span>
             <span style="background:#10B981; color:#000; font-size:9px; font-weight:800; padding:1px 5px; border-radius:3px;">ONLINE</span>
         </div>
+        <div style="color: #94A3B8; margin-top: 4px;">Phone GPS Fix:</div>
+        <div style="color: #38BDF8; font-family: monospace; font-size:10px;">{side_lat:.4f} N, {side_lon:.4f} E</div>
+        <div style="color: #64748B; font-size:10px; margin-top:2px;">{side_label[:24]}</div>
+        <div style="color: #94A3B8; margin-top: 4px;">Handset Action: <span style="color:#10B981; font-weight:700;">{side_action}</span></div>
         <div style="color: #94A3B8; margin-top: 4px;">Open on phone for field demo:</div>
         <div style="color: #38BDF8; font-family: monospace; font-size:10px; margin-top: 2px;">?mode=courier</div>
     </div>
@@ -232,25 +242,44 @@ with col_s4:
         select_scenario("fraud_api_scraping.json")
         st.rerun()
 
-# Real-Time Mobile Bridge Synchronizer
-@st.fragment(run_every="1s")
-def _sync_live_courier_bridge():
-    state = get_live_state()
-    last_ts = st.session_state.get("last_bridge_ts", 0.0)
-    curr_ts = state.get("last_action_timestamp", 0.0)
-    if curr_ts > last_ts and curr_ts > 0:
-        st.session_state.last_bridge_ts = curr_ts
-        target_scn = state.get("active_scenario")
-        if target_scn and target_scn != st.session_state.active_scenario_file:
-            st.session_state.active_scenario_file = target_scn
-            if state.get("otp_verified"):
-                st.session_state.otp_cleared = True
-            st.rerun()
-        elif state.get("otp_verified") and not st.session_state.otp_cleared:
-            st.session_state.otp_cleared = True
-            st.rerun()
+# Real-Time Mobile Bridge Synchronizer (Crash-Proof, Zero Race Conditions)
+bridge_state = get_live_state()
+last_bridge_ts = st.session_state.get("last_bridge_ts", 0.0)
+curr_bridge_ts = bridge_state.get("last_action_timestamp", 0.0)
 
-_sync_live_courier_bridge()
+# Synchronize scenario if phone action is newer
+if curr_bridge_ts > last_bridge_ts and curr_bridge_ts > 0:
+    st.session_state.last_bridge_ts = curr_bridge_ts
+    target_scn = bridge_state.get("active_scenario")
+    if target_scn and target_scn != st.session_state.active_scenario_file:
+        st.session_state.active_scenario_file = target_scn
+    if bridge_state.get("otp_verified"):
+        st.session_state.otp_cleared = True
+elif bridge_state.get("otp_verified") and not st.session_state.otp_cleared:
+    st.session_state.otp_cleared = True
+
+# Live Field Handset Status Bar
+handset_lat = bridge_state.get("courier_lat", 4.3852)
+handset_lon = bridge_state.get("courier_lon", 100.9781)
+handset_label = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")
+handset_act = bridge_state.get("courier_action", "STANDBY")
+has_photo = bridge_state.get("has_live_photo", False)
+photo_stat = bridge_state.get("live_photo_status", "NONE")
+
+col_br1, col_br2 = st.columns([3, 1])
+with col_br1:
+    photo_badge = f"<span style='color:#10B981; font-weight:700;'>[PHOTO: {photo_stat}]</span>" if has_photo else "<span style='color:#64748B;'>[NO PHOTO]</span>"
+    render_html(f"""
+    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 11px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span><b style="color:#38BDF8;">FIELD HANDSET TELEMATICS:</b> <span style="color:#F1F5F9;">{handset_label}</span> (<span style="font-family:monospace; color:#38BDF8;">{handset_lat:.4f}, {handset_lon:.4f}</span>) {photo_badge}</span>
+            <span><b>ACTION:</b> <span style="color:#10B981; font-family:monospace;">{handset_act}</span></span>
+        </div>
+    </div>
+    """)
+with col_br2:
+    if st.button("Sync Handset Feed", use_container_width=True, help="Synchronize telemetry state with courier smartphone"):
+        st.rerun()
 
 # Run Orchestrator Pipeline
 scenario_data = load_scenario(st.session_state.active_scenario_file)
@@ -301,9 +330,20 @@ if st.session_state.active_scenario_file == "fraud_gps_spoof.json":
     status_class = "status-freeze"
     target_id = f"#{scenario_data.get('shipment_id', 'GDX-94021')}"
     subject_label = f"{scenario_data.get('courier_name', 'Ahmad Farhan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
-    telemetry_fact = f"Peak Speed: {sentinel.get('highest_velocity_kmh', 458):.0f} km/h (Physically Impossible)"
+    
+    # Check if triggered by live courier phone
+    live_spd = bridge_state.get("highest_velocity_kmh", 458.0)
+    live_dist = bridge_state.get("spoof_distance_km", 38.0)
+    origin_lbl = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")
+    dest_lbl = bridge_state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
+
+    telemetry_fact = f"Peak Speed: {live_spd:.0f} km/h (Physically Impossible)"
     cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 4200):.2f}"
-    summary_text = "Courier telematics recorded a 38 km coordinate leap across Klang Valley in under 3 minutes (458 km/h). Real physical road transit requires a minimum of 34 minutes via OSRM. Autonomous delivery hold executed."
+    summary_text = (
+        f"Courier telematics recorded a {live_dist:.1f} km coordinate leap from {origin_lbl} to {dest_lbl} "
+        f"in under 2.0 minutes ({live_spd:.0f} km/h). Real physical road transit requires a minimum of 34 minutes via OSRM. "
+        f"Autonomous delivery hold executed by Warden."
+    )
 elif st.session_state.active_scenario_file == "normal_delivery.json":
     brief_tag = "INC-081"
     brief_title = "Legitimate Courier Delivery Route"
@@ -325,9 +365,18 @@ elif st.session_state.active_scenario_file == "fraud_pod_spoof.json":
         status_class = "status-otp"
     target_id = f"#{scenario_data.get('shipment_id', 'GDX-77192')}"
     subject_label = f"{scenario_data.get('courier_name', 'Kevin Tan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
-    telemetry_fact = "Laplacian Edge Variance: 14.2 (Threshold: 60.0)"
-    cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 1850):.2f}"
-    summary_text = "Driver uploaded a darkened interior photo of a car floor mat to simulate parcel handover. Kinetic route was nominal, but proof-of-delivery failed optical edge variance heuristic. Autonomous Warden suspended payout and dispatched an SMS OTP challenge to the customer."
+    
+    if bridge_state.get("has_live_photo"):
+        live_var = bridge_state.get("live_photo_variance", 14.2)
+        telemetry_fact = f"Live Phone Laplacian Variance: {live_var:.1f} (Threshold: 55.0)"
+        summary_text = (
+            f"Courier uploaded live camera capture from smartphone. Optical texture analysis ({live_var:.1f}) "
+            f"failed physical edge variance threshold (55.0). Autonomous Warden suspended payout and dispatched "
+            f"an SMS OTP challenge to customer Sarah Lim."
+        )
+    else:
+        telemetry_fact = "Laplacian Edge Variance: 14.2 (Threshold: 55.0)"
+        summary_text = "Driver uploaded a darkened interior photo of a car floor mat to simulate parcel handover. Kinetic route was nominal, but proof-of-delivery failed optical edge variance heuristic. Autonomous Warden suspended payout and dispatched an SMS OTP challenge to the customer."
 else:  # fraud_api_scraping.json
     brief_tag = "SEC-304"
     brief_title = "Out-of-Hours Subcontractor API Harvesting"
