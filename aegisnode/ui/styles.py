@@ -285,6 +285,157 @@ def get_custom_css() -> str:
     .delta-amber { color: #F59E0B; }
     .delta-cyan { color: #38BDF8; }
 
+    /* Clean Enterprise Tabs Navigation */
+    div[data-baseweb="tab-list"] {
+        background-color: transparent !important;
+        border-bottom: 1px solid #1E293B !important;
+        gap: 8px !important;
+        padding-bottom: 0px !important;
+        margin-bottom: 16px !important;
+    }
+
+    button[data-baseweb="tab"] {
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        border-radius: 0 !important;
+        color: #64748B !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.84rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em !important;
+        padding: 10px 16px !important;
+        transition: all 0.15s ease !important;
+        box-shadow: none !important;
+    }
+
+    button[data-baseweb="tab"]:hover {
+        color: #E2E8F0 !important;
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #38BDF8 !important;
+        border-bottom: 2px solid #38BDF8 !important;
+        background: transparent !important;
+    }
+
+    div[data-baseweb="tab-highlight"] {
+        background-color: #38BDF8 !important;
+    }
+
+    /* Quiet Incident Briefing Card (Contextual Facts) */
+    .incident-briefing {
+        background: #0B1120;
+        border: 1px solid #1E293B;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 18px;
+    }
+
+    .briefing-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #1A2338;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .briefing-id-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .briefing-tag {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #38BDF8;
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+
+    .briefing-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #F8FAFC;
+    }
+
+    .briefing-status {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 4px;
+        letter-spacing: 0.04em;
+    }
+
+    .status-freeze {
+        color: #F87171;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .status-otp {
+        color: #FBBF24;
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .status-clear {
+        color: #34D399;
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .briefing-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        padding: 12px 0;
+        border-bottom: 1px solid #1A2338;
+    }
+
+    @media (max-width: 900px) {
+        .briefing-meta-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .meta-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #64748B;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .meta-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #E2E8F0;
+    }
+
+    .briefing-summary {
+        padding-top: 10px;
+        font-size: 0.82rem;
+        color: #94A3B8;
+        line-height: 1.5;
+    }
+
     /* 8. Authoritative Security Scorecard */
     .soc-scorecard {
         background: #0D1322;
