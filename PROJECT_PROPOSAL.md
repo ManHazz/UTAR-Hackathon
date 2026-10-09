@@ -7,11 +7,28 @@
 
 ---
 
+## EXECUTIVE BLUEPRINT: THE THREE PILLARS
+
+| Pillar | Name | Definition & Focus |
+| :--- | :--- | :--- |
+| **Pillar 1** | **The Core Problem** | **Blind Trust in Mobile Endpoints:** Logistics platforms blindly trust client-side smartphones, enabling GPS teleportation, forged drop-off photos, dispute deadlocks, and credential harvesting without verifiable proof. |
+| **Pillar 2** | **The Agents** | **Autonomous Multi-Agent System (MAS):** A specialized 3-agent pipeline (**Sentinel** [Watcher] $\rightarrow$ **Investigator** [Brain] $\rightarrow$ **Warden** [Enforcer]) coordinated alongside an append-only **Cryptographic Ledger Agent**. |
+| **Pillar 3** | **The Solution** | **Zero-Trust Verification Engine:** An end-to-end cyber-physical architecture enforcing *"Never Trust, Always Verify"* by cross-checking device GPS with real road kinematics (OSRM), cell baseband IDs, and adaptive OTP challenges. |
+
+---
+
 ## TABLE OF CONTENTS
-- [1. Introduction](#1-introduction)
+- [1. Introduction & Project Foundation](#1-introduction--project-foundation)
   - [1.1 Background of Last-Mile Logistics in Malaysia](#11-background-of-last-mile-logistics-in-malaysia)
-  - [1.2 Problem Statements](#12-problem-statements)
-  - [1.3 Aims and Objectives](#13-aims-and-objectives)
+  - [1.2 THE CORE PROBLEM: Blind Trust & Exploitation Vectors](#12-the-core-problem-blind-trust--exploitation-vectors)
+    - [1.2.1 Problem 1: Software GPS Teleportation (Ghost Couriers)](#121-problem-1-software-gps-teleportation-ghost-couriers)
+    - [1.2.2 Problem 2: Optical Proof-of-Delivery Evasion ("Photo & Run")](#122-problem-2-optical-proof-of-delivery-evasion-photo--run)
+    - [1.2.3 Problem 3: Multi-Party Dispute Deadlock (Word vs. Word)](#123-problem-3-multi-party-dispute-deadlock-word-vs-word)
+    - [1.2.4 Problem 4: Out-of-Hours Subcontractor API Harvesting](#124-problem-4-out-of-hours-subcontractor-api-harvesting)
+  - [1.3 THE SOLUTION: AegisNode Zero-Trust Architecture](#13-the-solution-aegisnode-zero-trust-architecture)
+    - [1.3.1 Solution Philosophy & Three Layers of Defense](#131-solution-philosophy--three-layers-of-defense)
+    - [1.3.2 Aims and Objectives](#132-aims-and-objectives)
+    - [1.3.3 Research & Engineering Questions](#133-research--engineering-questions)
   - [1.4 Scope and Limitations](#14-scope-and-limitations)
   - [1.5 Significance of the Project](#15-significance-of-the-project)
 - [2. Literature Review & Industry Background](#2-literature-review--industry-background)
@@ -23,7 +40,12 @@
   - [2.6 Comparative Analysis & Identified Research Gaps](#26-comparative-analysis--identified-research-gaps)
 - [3. Methodology & System Architecture](#3-methodology--system-architecture)
   - [3.1 Overall System Architecture & Data Flow](#31-overall-system-architecture--data-flow)
-  - [3.2 The Multi-Agent Pipeline Design](#32-the-multi-agent-pipeline-design)
+  - [3.2 THE AGENTS: Autonomous Multi-Agent Pipeline](#32-the-agents-autonomous-multi-agent-pipeline)
+    - [3.2.1 Agent 1: Sentinel Agent (Kinematic & Ingestion Scanner)](#321-agent-1-sentinel-agent-kinematic--ingestion-scanner)
+    - [3.2.2 Agent 2: Investigator Agent (Road Physics & Deep Reasoner)](#322-agent-2-investigator-agent-road-physics--deep-reasoner)
+    - [3.2.3 Agent 3: Warden Agent (Risk-Adaptive Policy Enforcer)](#323-agent-3-warden-agent-risk-adaptive-policy-enforcer)
+    - [3.2.4 Agent 4: Cryptographic Audit Ledger Agent (Non-Repudiation Engine)](#324-agent-4-cryptographic-audit-ledger-agent-non-repudiation-engine)
+    - [3.2.5 Multi-Agent Handoff & Consensus Workflow](#325-multi-agent-handoff--consensus-workflow)
   - [3.3 Mathematical Formulations & Heuristic Scoring](#33-mathematical-formulations--heuristic-scoring)
   - [3.4 Threat Simulation Scenarios](#34-threat-simulation-scenarios)
   - [3.5 Technical Architecture & Software Dependencies](#35-technical-architecture--software-dependencies)
@@ -39,36 +61,86 @@
 
 ---
 
-## 1. INTRODUCTION
+## 1. INTRODUCTION & PROJECT FOUNDATION
 
 ### 1.1 Background of Last-Mile Logistics in Malaysia
-The e-commerce sector in Southeast Asia has expanded substantially over the past decade, placing immense pressure on domestic express delivery networks. In Malaysia, major courier providers manage hundreds of thousands of daily consignments across dense metropolitan areas such as the Klang Valley. 
+The e-commerce sector in Southeast Asia has expanded substantially over the past decade, placing immense pressure on domestic express delivery networks. In Malaysia, courier providers manage hundreds of thousands of daily consignments across dense metropolitan areas such as the Klang Valley. 
 
-Within the supply chain, the last-mile stage — the transit of goods from a regional delivery hub to the consumer doorstep — is documented as the most expensive and operationally complex phase, representing between 41% and 53% of total logistics expenditure (Gevaers et al., 2014; Joerss et al., 2016). Modern logistics infrastructures rely heavily on mobile-based telematics, where couriers use personal smartphones to transmit Global Positioning System (GPS) waypoints and upload digital Proof-of-Delivery (POD) photographs. However, these systems inherently operate on a model of **Blind Trust**, treating data originating from client mobile endpoints as inherently authentic once authenticated at login.
+Within the supply chain, the last-mile stage — the transit of goods from a regional distribution hub to the consumer doorstep — is documented as the most expensive and operationally complex phase, representing between 41% and 53% of total logistics expenditure (Gevaers et al., 2014; Joerss et al., 2016). Modern logistics infrastructures rely heavily on mobile-based telematics, where couriers use personal smartphones to transmit Global Positioning System (GPS) waypoints and upload digital Proof-of-Delivery (POD) photographs. However, these systems inherently operate on a model of **Blind Trust**, treating data originating from client mobile endpoints as authentic once authenticated at login.
 
-### 1.2 Problem Statements
+---
 
-#### 1.2.1 Blind Trust in Mobile Endpoint Devices
-Current logistics dispatch architectures trust GPS coordinates transmitted directly from couriers' smartphones. Because mobile operating systems grant users developer privileges, dishonest drivers can deploy off-the-shelf "Mock Location" tools and virtual GPS injectors (Tippenhauer et al., 2011). Couriers can simulate presence inside a customer delivery zone without physically traveling there, falsely marking consignments as complete and facilitating internal cargo theft.
+### 1.2 THE CORE PROBLEM: Blind Trust & Exploitation Vectors
 
-#### 1.2.2 The "Photo & Run" Optical Proof-of-Delivery Loophole
-To confirm delivery, field applications prompt drivers for a photo submission. In practice, rogue couriers exploit automated intake systems by photographing arbitrary non-verifiable surfaces, such as vehicle floor mats, steering wheels, or closed gates, before absconding with high-value items. The dispatch system registers an image payload and marks the order as fulfilled, despite the absence of an authentic handover.
+The fundamental vulnerability across modern last-mile logistics dispatch systems is **Blind Trust in Client Endpoints**. Because couriers execute operational workflows on personal mobile devices, the central server accepts submitted latitude, longitude, and photo evidence as absolute truth. This architectural blind spot generates four distinct, costly fraud vectors:
 
-#### 1.2.3 Dispute Deadlock and Lack of Cryptographic Non-Repudiation
-When high-value goods (e.g., consumer electronics exceeding RM 1,000) fail to reach the consumer, courier management faces a dispute deadlock. The customer reports non-receipt, while the courier presents an in-app completion timestamp. Centralized relational databases do not provide cryptographic non-repudiation; logs are subject to administrative mutation or contestation, compelling courier operators to absorb substantial settlement claims to preserve merchant contracts.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   THE CORE PROBLEM: BLIND TRUST LOOPHOLE               │
+│                                                                        │
+│   Courier Smartphone (Untrusted Edge Endpoint)                         │
+│   ├── [Problem 1] Android Mock GPS App ──────► Fakes Geofence Jump     │
+│   ├── [Problem 2] Arbitrary Camera Snaps ───► Fakes Drop-off Photo     │
+│   └── [Problem 4] Stolen Subcontractor API ──► Scrapes PII at 03:00 AM │
+│                                                                        │
+│   Central Logistics Server (Blindly Trusts Client-Side Claims)         │
+│   └── Result: [Problem 3] Dispute Deadlock & High Financial Losses     │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-#### 1.2.4 Out-of-Hours Subcontractor API Harvesting
-Third-party logistics (3PL) subcontractors receive API credentials to query delivery manifests and batch endpoints. Compromised credentials or rogue insiders can conduct automated scraping during off-hours (e.g., 03:00 AM), extracting thousands of customer personally identifiable information (PII) records, including contact numbers and physical addresses. This fuels secondary cyber threats such as fraudulent Cash-on-Delivery (COD) extortion schemes.
+#### 1.2.1 Problem 1: Software GPS Teleportation (Ghost Couriers)
+Drivers exploit developer-level Android operating system permissions (`ACCESS_MOCK_LOCATION`) and third-party virtual GPS injectors (Tippenhauer et al., 2011). Couriers can remain stationary at a coffee shop in Shah Alam while artificially broadcasting coordinates 15 kilometers away in Petaling Jaya. Couriers collect per-drop fulfillment fees without burning fuel or navigating urban traffic, marking high-value items as fulfilled and stealing the cargo.
 
-### 1.3 Aims and Objectives
-The overarching aim of AegisNode is to introduce a **Zero-Trust Cybersecurity Framework** to last-mile logistics operations, verifying physical and digital telemetry through autonomous agent reasoning. Specific objectives comprise:
-1. Design a multi-agent verification pipeline (Sentinel, Investigator, Warden) capable of processing telemetry streams with low operational latency.
-2. Formulate a kinematic validation model cross-referencing GPS coordinates with OpenStreetMap road networks and cellular baseband tower identifiers.
-3. Establish a risk-adaptive policy engine that substitutes binary pass/fail enforcement with proportional step-up cryptographic challenges.
-4. Construct a tamper-evident SHA-256 audit ledger that enforces data immutability and non-repudiation for dispute resolution.
+#### 1.2.2 Problem 2: Optical Proof-of-Delivery Evasion ("Photo & Run")
+Current mobile logistics applications verify only the successful transfer of an image file (e.g., HTTP 200 OK) rather than the semantic legitimacy of the content. Couriers exploit this by photographing vehicle floor mats, steering wheels, or closed building gates before leaving with the package. Because the backend lacks real-time optical validation, the parcel is falsely closed in the database.
 
-#### 1.3.1 Research & Engineering Questions
-* **RQ1:** Can spatial-temporal kinematic analysis detect software-based GPS spoofing without requiring invasive continuous tracking on client devices?
+#### 1.2.3 Problem 3: Multi-Party Dispute Deadlock (Word vs. Word)
+When high-value consignments (e.g., smartphones exceeding RM 1,000) go missing, logistics operators face a dispute deadlock:
+* The consumer denies receiving the package and demands a refund.
+* The courier points to the in-app delivery timestamp and photo upload.
+* The courier operator is trapped in between without cryptographic evidence.
+Because centralized relational database entries can be altered or disputed in arbitration, logistics operators are forced to absorb significant financial write-offs and customer churn.
+
+#### 1.2.4 Problem 4: Out-of-Hours Subcontractor API Harvesting
+Third-party logistics (3PL) contractors receive API access to manage local distribution manifests. When API keys are leaked or misused by rogue insiders, automated bots can execute batch scraping queries at odd hours (e.g., 03:00 AM). These unauthorized requests harvest thousands of customer phone numbers, names, and residential addresses, directly fueling telephone scams and fraudulent Cash-on-Delivery (COD) schemes.
+
+---
+
+### 1.3 THE SOLUTION: AegisNode Zero-Trust Architecture
+
+AegisNode resolves the Core Problem by adapting the **Zero-Trust Cybersecurity Framework ("Never Trust, Always Verify")** (Rose et al., 2020) into physical supply chain logistics. Instead of trusting client-side mobile reports, AegisNode continuously evaluates every physical and cyber event using three cooperating layers of defense:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│               THE SOLUTION: THREE LAYERS OF DEFENSE                    │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. Continuous Sensory Ingestion Layer:                                 │
+│    Calculates physical velocity and verifies cellular baseband IDs.    │
+├────────────────────────────────────────────────────────────────────────┤
+│ 2. Deep Spatial & Heuristic Reasoning Layer:                          │
+│    Validates road travel times via OpenStreetMap (OSRM) and checks     │
+│    optical image entropy; computes an Explainable Zero-Trust Score.    │
+├────────────────────────────────────────────────────────────────────────┤
+│ 3. Risk-Adaptive Policy & Non-Repudiation Layer:                       │
+│    Replaces binary outcomes with graduated actions (Auto-Clear,        │
+│    Customer OTP Challenge, Package Freeze) and seals records in        │
+│    an immutable SHA-256 forward-linked cryptographic ledger.           │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 1.3.1 Solution Philosophy & Three Layers of Defense
+1. **Sensory Corroboration:** Software GPS coordinates are never evaluated in isolation; they must correlate with cellular baseband tower handoffs and kinematic speed limits.
+2. **Deterministic Physics Validation:** Routes are validated against real-world road networks using OpenStreetMap (OSRM) routing graph mathematics.
+3. **Graduated Risk Intervention:** Borderline anomalies do not immediately penalize drivers; instead, the system triggers an interactive, customer-facing Step-Up Challenge (SMS/WhatsApp OTP).
+
+#### 1.3.2 Aims and Objectives
+1. Implement a specialized multi-agent verification pipeline (**Sentinel**, **Investigator**, **Warden**) executing within sub-second latencies.
+2. Cross-reference device GPS telematics with OpenStreetMap (OSRM) driving physics and cellular baseband IDs to defeat mock-location spoofing.
+3. Formulate an explainable Zero-Trust scoring algorithm ($0 - 100$) that provides complete forensic penalty breakdowns.
+4. Deploy a tamper-evident SHA-256 cryptographic audit ledger that guarantees non-repudiation for dispute resolution.
+
+#### 1.3.3 Research & Engineering Questions
+* **RQ1:** Can spatial-temporal road kinematics reliably detect location spoofing without draining the courier's phone battery?
 * **RQ2:** How effectively can multi-agent pipeline delegation balance fast sensory filtering against deep geographic routing computation?
 * **RQ3:** Does forward-linked cryptographic hash chaining provide verifiable non-repudiation suitable for supply chain dispute resolution?
 
@@ -129,7 +201,7 @@ Modifying any historical record $M_{n-k}$ breaks the forward hash sequence, maki
 ## 3. METHODOLOGY & SYSTEM ARCHITECTURE
 
 ### 3.1 Overall System Architecture & Data Flow
-AegisNode processes telematics through a 3-agent pipeline supported by an immutable audit ledger:
+AegisNode processes telematics through a specialized multi-agent pipeline supported by an immutable audit ledger:
 
 ```
 [ Telemetry Ingestion: GPS / Cell Tower / POD / API Streams ]
@@ -162,22 +234,80 @@ AegisNode processes telematics through a 3-agent pipeline supported by an immuta
             └───────────────────────────┘
 ```
 
-### 3.2 The Multi-Agent Pipeline Design
+---
 
-#### 1. Sentinel Agent (Fast Ingestion & Kinematic Scanner)
-The Sentinel Agent acts as the first-line sensory filter. It analyzes incoming GPS pairs and cell tower transitions, flagging anomalies when computed velocities exceed road network thresholds or when coordinates change while cellular tower identifiers remain static.
+### 3.2 THE AGENTS: Autonomous Multi-Agent Pipeline
 
-#### 2. Investigator Agent (Deep Spatial & Forensic Reasoner)
-Upon receiving an anomaly flag, the Investigator Agent queries the OpenStreetMap Open Source Routing Machine (OSRM) engine. It computes actual driving distances and realistic travel durations along recognized road infrastructure (e.g., Federal Highway). It incorporates visual heuristic checks and cargo value factors, producing an explainable Zero-Trust Score ($0 - 100$) accompanied by an itemized deduction matrix.
+AegisNode rejects monolithic processing in favor of **four specialized, cooperating agents**. Each agent possesses a bounded domain of responsibility, specific latency budgets, and precise deterministic handoff contracts:
 
-#### 3. Warden Agent (Risk-Adaptive Policy Enforcer)
-The Warden Agent executes graduated containment policies:
-* **Score $\ge 75$ (Nominal):** Issues an automated clearance, authorizing the delivery and scheduling driver commission payout (+RM 4.50).
-* **Score $40 - 74$ (Elevated Risk):** Triggers a Step-Up Challenge, preventing consignment release until a 6-digit one-time password (OTP) sent directly to the recipient is validated.
-* **Score $< 40$ (Critical Risk):** Enforces an immediate Package Freeze, revokes the driver session, locks the mobile terminal, and generates a security dispatch alert.
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                   AEGISNODE MULTI-AGENT SPECIFICATION MATRIX                    │
+├───────────────────┬──────────────┬───────────────┬───────────────────────────────┤
+│ Agent Name        │ Role Type    │ Target Latency│ Core Operational Responsibility│
+├───────────────────┼──────────────┼───────────────┼───────────────────────────────┤
+│ 1. Sentinel Agent │ Reactive     │ ~18 ms        │ Sensory scanning & telemetry  │
+│ 2. Investigator   │ Deliberative │ ~142 ms       │ Road physics & trust scoring  │
+│ 3. Warden Agent   │ Enforcement  │ ~8 ms         │ Risk-adaptive containment     │
+│ 4. Ledger Agent   │ Durability   │ ~2 ms         │ SHA-256 audit chaining        │
+└───────────────────┴──────────────┴───────────────┴───────────────────────────────┘
+```
 
-#### 4. Cryptographic Audit Ledger
-Maintains an append-only sequence of SHA-256 forward-linked records for all agent decisions, telemetry samples, and supervisor overrides, offering non-repudiation JSON export for audit compliance.
+#### 3.2.1 Agent 1: Sentinel Agent (Kinematic & Ingestion Scanner)
+* **Code Reference:** `aegisnode/agents/sentinel_agent.py`
+* **Operational Role:** Operates as the high-throughput sensory intake gatekeeper.
+* **Core Mechanisms:**
+  1. **Kinematic Velocity Calculation:** Computes consecutive point-to-point transit speed ($v = \Delta d / \Delta t$). Any transition exceeding road vehicle limits ($>120\text{ km/h}$) flags a `TELEPORTATION_ANOMALY`.
+  2. **Cell Tower Baseband Triangulation:** Inspects cellular tower IDs (`cell_tower_id`). If coordinates jump multiple kilometers while the device remains linked to the same cell tower, it flags `MOCK_LOCATION_SPOOF`.
+  3. **Ingestion Burst Detection:** Monitors API traffic patterns, flagging requests exceeding the normal operational threshold ($>60\text{ req/min}$) during off-hours (03:00 AM).
+
+#### 3.2.2 Agent 2: Investigator Agent (Road Physics & Deep Reasoner)
+* **Code Reference:** `aegisnode/agents/investigator_agent.py`
+* **Operational Role:** Invoked exclusively when Sentinel flags an anomaly, conserving computational resources.
+* **Core Mechanisms:**
+  1. **OSRM Road Network Routing:** Interfaces with the OpenStreetMap OSRM routing engine to retrieve actual road network geometry and expected transit duration along Malaysian highways (e.g., Federal Highway).
+  2. **Optical Proof-of-Delivery Auditing:** Evaluates drop-off photographs for low visual entropy (blank screens, floor mats) and mismatched EXIF metadata.
+  3. **Zero-Trust Score Calculation:** Computes an explainable score from 0 to 100 with itemized deductions:
+     $$\text{Trust Score} = 100 - (\text{Kinematic Penalty} + \text{Telematics Penalty} + \text{POD Penalty}) \times \text{Cargo Multiplier}$$
+
+#### 3.2.3 Agent 3: Warden Agent (Risk-Adaptive Policy Enforcer)
+* **Code Reference:** `aegisnode/agents/warden_agent.py`
+* **Operational Role:** Translates the Investigator's Zero-Trust score into real-time operational countermeasures.
+* **Three-Tier Policy Engine:**
+  * **Score $\ge 75$ (Nominal State):** `AUTO_CLEAR`. Unlocks consignment delivery, validates recipient handover, and releases courier commission (+RM 4.50).
+  * **Score $40 - 74$ (Elevated Risk):** `STEP_UP_CHALLENGE`. Halts release and demands a 6-digit one-time password (OTP) sent directly to the customer's phone.
+  * **Score $< 40$ (Critical Risk):** `PACKAGE_FREEZE`. Instantly locks the courier mobile app, halts payout, and dispatches a high-priority ticket to security operations.
+
+#### 3.2.4 Agent 4: Cryptographic Audit Ledger Agent (Non-Repudiation Engine)
+* **Code Reference:** `aegisnode/agents/ledger.py`
+* **Operational Role:** Cryptographic durability and non-repudiation.
+* **Core Mechanisms:**
+  * Creates an append-only forward-linked block for every telemetry event, agent score, and supervisor override.
+  * Generates SHA-256 block digests ($H_n = \text{SHA256}(H_{n-1} \,\|\, M_n)$) to ensure tamper-evidence.
+  * Provides non-repudiation JSON export for dispute resolution and external compliance auditing.
+
+#### 3.2.5 Multi-Agent Handoff & Consensus Workflow
+```
+[Raw Event] ──► Sentinel (18ms)
+                   │
+                   ├── Anomaly == False ──► Auto-Clear (Trust: 100)
+                   │
+                   └── Anomaly == True  ──► Investigator (142ms)
+                                               │
+                                               ▼
+                                            Computes Trust Score (0-100)
+                                               │
+                                               ▼
+                                            Warden Enforcer (8ms)
+                                            ├── Clear (>= 75)
+                                            ├── OTP Challenge (40-74)
+                                            └── Freeze & Lock (< 40)
+                                               │
+                                               ▼
+                                            Ledger Agent (Appends SHA-256 Block)
+```
+
+---
 
 ### 3.3 Mathematical Formulations & Heuristic Scoring
 
