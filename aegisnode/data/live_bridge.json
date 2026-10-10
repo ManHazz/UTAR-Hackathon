@@ -1,6 +1,6 @@
 {
   "active_scenario": "normal_delivery.json",
-  "last_action_timestamp": 1791557469.4146955,
+  "last_action_timestamp": 1791621157.1898334,
   "courier_action": "STANDBY",
   "otp_input": "",
   "otp_verified": false,
@@ -16,6 +16,7 @@
   "spoof_target_lon": 101.6445,
   "spoof_target_label": "Menara PJX, Petaling Jaya",
   "spoof_distance_km": 185.3,
+  "spoof_elapsed_min": 2.0,
   "has_live_photo": false,
   "live_photo_path": "",
   "live_photo_status": "NONE",

@@ -2,7 +2,7 @@
 AegisNode - Mobile Courier Handset Interface
 Dedicated full-screen mobile smartphone view for physical field demonstrations.
 Acquires real hardware GPS from phone and captures live photos via device camera.
-Zero Emojis - Enterprise Cyber-Physical Security.
+Strict enterprise compliance - Zero Emojis.
 """
 
 from typing import Optional
@@ -105,6 +105,19 @@ def render_mobile_courier_view():
 
     state = get_live_state()
 
+    # Top Switcher: Allows smooth exit back to Desktop SOC Command Center
+    col_top1, col_top2 = st.columns([2, 1])
+    with col_top1:
+        st.caption("Courier Handset Operating Surface")
+    with col_top2:
+        if st.button("Switch to SOC View", use_container_width=True, help="Switch view back to desktop SOC command center"):
+            st.session_state.mobile_mode_active = False
+            if "mode" in st.query_params:
+                del st.query_params["mode"]
+            if "view" in st.query_params:
+                del st.query_params["view"]
+            st.rerun()
+
     # 1. Check for URL Query Coordinates passed from browser GPS
     query_lat = st.query_params.get("lat")
     query_lon = st.query_params.get("lon")
@@ -127,7 +140,6 @@ def render_mobile_courier_view():
     otp_verified = state.get("otp_verified", False)
 
     phone_svg = get_svg_icon("phone", color="#38BDF8", size=18)
-    shield_svg = get_svg_icon("shield", color="#10B981", size=16)
 
     st.markdown(f"""
     <div class="mobile-shell">
@@ -153,7 +165,7 @@ def render_mobile_courier_view():
             </div>
             <div style="display:flex; justify-content:space-between;">
                 <span style="font-size:11px; color:#94A3B8;">DESTINATION:</span>
-                <span style="font-size:11px; font-weight:600; color:#F1F5F9;">Menara PJX, Petaling Jaya</span>
+                <span style="font-size:11px; font-weight:600; color:#F1F5F9;">Chancellor Hall, UTP</span>
             </div>
         </div>
     </div>
@@ -161,7 +173,7 @@ def render_mobile_courier_view():
 
     # 2. HARDWARE TELEMATICS & GPS POSITION SENSOR
     st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 12px 0 6px 0; text-transform:uppercase;'>1. Phone Hardware GPS Telematics:</div>", unsafe_allow_html=True)
-    
+
     route_history = state.get("route_history", [])
     history_count = len(route_history)
 
@@ -181,7 +193,7 @@ def render_mobile_courier_view():
     </div>
     """, unsafe_allow_html=True)
 
-    # 1-Click Campus Waypoints for tracing real route around UTP
+    # Campus Waypoints for tracing real route around UTP
     st.markdown("<div style='font-size:10px; font-weight:700; color:#94A3B8; margin-bottom:4px; text-transform:uppercase;'>UTP Campus Waypoints (1-Tap Trace):</div>", unsafe_allow_html=True)
     col_w1, col_w2 = st.columns(2)
     with col_w1:
@@ -212,10 +224,10 @@ def render_mobile_courier_view():
             st.rerun()
     with col_act2:
         if st.button("Reset Route Path", use_container_width=True, help="Clear breadcrumbs and start route fresh"):
-            clear_route_history()
+            clear_route_history(cur_lat, cur_lon, cur_label)
             st.rerun()
 
-    # Browser Geolocation JS Widget for real GPS acquisition
+    # Browser Geolocation JS Widget (Safe, no parent window redirection)
     st.components.v1.html("""
     <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; text-align:center; padding:6px 0;">
         <button id="gps-btn" onclick="acquireGPS()" style="width:100%; background:#0284C7; color:#FFFFFF; border:none; border-radius:8px; padding:10px 14px; font-size:12px; font-weight:700; cursor:pointer;">
@@ -245,13 +257,6 @@ def render_mobile_courier_view():
                 btn.innerText = "GPS Fix Acquired";
                 box.style.display = "block";
                 box.innerHTML = "<a href='?mode=courier&lat=" + lat + "&lon=" + lon + "' target='_top' style='display:block; width:100%; background:#10B981; color:#0B0F17; font-weight:800; font-size:12px; padding:10px 12px; border-radius:6px; text-decoration:none;'>[TAP TO LOCK YOUR LIVE GPS: " + lat + ", " + lon + "]</a>";
-                try {
-                    var u = new URL(window.parent.location.href);
-                    u.searchParams.set("mode", "courier");
-                    u.searchParams.set("lat", lat);
-                    u.searchParams.set("lon", lon);
-                    window.parent.location.href = u.toString();
-                } catch(e) {}
             },
             function(err) {
                 btn.innerText = "Retry GPS Query";
@@ -261,7 +266,7 @@ def render_mobile_courier_view():
         );
     }
     </script>
-    """, height=130)
+    """, height=125)
 
     with st.expander("Fine-Tune Exact GPS Coordinates", expanded=False):
         c_lat, c_lon = st.columns(2)
@@ -275,12 +280,13 @@ def render_mobile_courier_view():
 
     # 3. LIVE PROOF-OF-DELIVERY (POD) PHOTO CAPTURE
     st.markdown("<div style='font-size:11px; font-weight:700; color:#38BDF8; margin: 10px 0 6px 0; text-transform:uppercase;'>2. Live Optical POD Verification:</div>", unsafe_allow_html=True)
-    
+    st.caption("Snap physical parcel with phone camera. OpenCV Laplacian evaluates edge texture in real time.")
+
     camera_pic = st.camera_input("Snap Live POD Photo with Phone Camera", label_visibility="collapsed")
     if camera_pic is not None:
         pic_bytes = camera_pic.getvalue()
         process_uploaded_pod_photo(pic_bytes)
-        st.success("POD photo transmitted to SOC command center.")
+        st.success("POD photo processed and transmitted to SOC Command Center.")
 
     # Alternative file uploader for testing photos
     with st.expander("Or select image file from gallery", expanded=False):
@@ -331,7 +337,7 @@ def render_mobile_courier_view():
                 [SECURITY CHALLENGE] CUSTOMER OTP REQUIRED
             </div>
             <div style="font-size:12px; line-height:1.5;">
-                Proof-of-delivery photo flagged as synthetic/floor mat.
+                Proof-of-delivery photo flagged as low-texture / floor mat.
                 <br><b>Trust Score: {score}/100</b>
                 <br>Obtain the 6-digit verification code sent to customer Sarah Lim.
             </div>
@@ -359,18 +365,52 @@ def render_mobile_courier_view():
         </div>
         """, unsafe_allow_html=True)
 
-    # 5. LIVE DEMO CONTROLLERS (ALL 4 SCENARIOS)
-    st.markdown("<div style='font-size:11px; font-weight:700; color:#64748B; margin: 12px 0 8px 0; text-transform:uppercase;'>Trigger Live Incidents:</div>", unsafe_allow_html=True)
+    # 5. INTERACTIVE TELEMATICS & KINEMATICS TEST SANDBOX
+    st.markdown("<div style='font-size:11px; font-weight:700; color:#64748B; margin: 12px 0 8px 0; text-transform:uppercase;'>Interactive Telematics & Kinematics Testing:</div>", unsafe_allow_html=True)
 
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button("Simulate GPS Spoof", type="secondary", use_container_width=True, help="Teleport from current position to Menara PJX"):
-            trigger_gps_spoof(start_lat=cur_lat, start_lon=cur_lon)
-            st.rerun()
+    with st.expander("Telematics Spoof & Speed Injector", expanded=False):
+        st.caption("Test how the AI Agent evaluates physical kinematics by injecting coordinate jumps across different travel times.")
+        
+        target_choice = st.selectbox(
+            "Target Destination",
+            options=[
+                "Menara PJX, Petaling Jaya (185.3 km)",
+                "KLCC Twin Towers, Kuala Lumpur (198.5 km)",
+                "Ipoh Station 18 Hub, Perak (32.4 km)",
+            ]
+        )
+        duration_choice = st.selectbox(
+            "Elapsed Travel Duration",
+            options=[
+                "2.0 minutes (Mock Location Injection -> ~5,500 km/h)",
+                "15.0 minutes (High-Speed Transit -> ~740 km/h)",
+                "120.0 minutes (Feasible Highway Route -> ~92 km/h)",
+            ]
+        )
 
-    with col_btn2:
-        if st.button("Simulate Floor POD", type="secondary", use_container_width=True, help="Simulate dark car floor mat POD"):
-            update_courier_action("TRIGGER_POD_FORGERY", "fraud_pod_spoof.json")
+        dest_coords = {
+            "Menara PJX, Petaling Jaya (185.3 km)": (3.103200, 101.644500, "Menara PJX, Petaling Jaya"),
+            "KLCC Twin Towers, Kuala Lumpur (198.5 km)": (3.157800, 101.711800, "KLCC, Kuala Lumpur"),
+            "Ipoh Station 18 Hub, Perak (32.4 km)": (4.551200, 101.071800, "Ipoh Station 18, Perak"),
+        }
+        dur_mins = {
+            "2.0 minutes (Mock Location Injection -> ~5,500 km/h)": 2.0,
+            "15.0 minutes (High-Speed Transit -> ~740 km/h)": 15.0,
+            "120.0 minutes (Feasible Highway Route -> ~92 km/h)": 120.0,
+        }
+
+        if st.button("Inject Coordinate Jump Test", use_container_width=True, type="secondary"):
+            t_lat, t_lon, t_lbl = dest_coords[target_choice]
+            d_min = dur_mins[duration_choice]
+            trigger_gps_spoof(
+                start_lat=cur_lat,
+                start_lon=cur_lon,
+                target_lat=t_lat,
+                target_lon=t_lon,
+                start_label=cur_label,
+                target_label=t_lbl,
+                elapsed_minutes=d_min
+            )
             st.rerun()
 
     col_btn3, col_btn4 = st.columns(2)
@@ -383,10 +423,6 @@ def render_mobile_courier_view():
         if st.button("Reset Terminal", use_container_width=True, help="Reset to nominal state"):
             reset_live_state()
             st.rerun()
-
-    # Manual Status Refresh Button
-    if st.button("Refresh Terminal Status", use_container_width=True, help="Poll current Warden latch status"):
-        st.rerun()
 
     st.markdown("""
         <div style="text-align:center; margin-top:14px; font-size:10px; color:#64748B; font-family:'JetBrains Mono', monospace;">

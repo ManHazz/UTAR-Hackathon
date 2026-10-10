@@ -142,3 +142,24 @@ def test_ledger_tamper_rejection():
     assert verification["valid"] is False
     assert verification["tampered_at_index"] == 1
 
+def test_react_agent_execution_trace():
+    from aegisnode.agents.investigator_agent import InvestigatorAgent
+    investigator = InvestigatorAgent()
+
+    with open(DATA_DIR / "normal_delivery.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    findings = investigator.investigate(data, {"cell_tower_spoof_detected": False})
+    assert "react_trace" in findings
+    trace = findings["react_trace"]
+    assert len(trace) >= 4
+
+    for step in trace:
+        assert "step" in step
+        assert "thought" in step
+        assert "tool" in step
+        assert "observation" in step
+        assert "finding" in step
+        assert "status" in step
+
+

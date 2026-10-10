@@ -2,7 +2,7 @@
 AegisNode - Zero-Trust Verification for Last-Mile Logistics
 GDEX x ANON x UTAR Agentic AI Cybersecurity Hackathon 2026
 Interactive Security Operations Command Center (SOC) Dashboard
-Enterprise UX Architecture - Zero Emojis
+Strict enterprise compliance - Zero Emojis.
 """
 
 import sys
@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any
 
-# Ensure repository root is always in sys.path across all platforms (Streamlit Community Cloud Linux)
+# Ensure repository root is always in sys.path across all platforms
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -34,7 +34,15 @@ from aegisnode.ui.handset_simulator import render_courier_handset
 from aegisnode.ui.ledger_view import render_cryptographic_ledger
 
 from aegisnode.ui.mobile_view import render_mobile_courier_view
-from aegisnode.data.live_bridge import get_live_state, update_warden_state, build_live_scenario_data
+from aegisnode.data.live_bridge import (
+    get_live_state,
+    update_warden_state,
+    build_live_scenario_data,
+    trigger_gps_spoof,
+    update_courier_action,
+    reset_live_state,
+    clear_route_history
+)
 
 # 1. Page Configuration (Strict enterprise styling)
 st.set_page_config(
@@ -53,49 +61,15 @@ if mode_param in ("courier", "phone", "driver") or view_param in ("handset", "ph
     render_mobile_courier_view()
     st.stop()
 
-DATA_DIR = Path(__file__).parent / "data"
-
-SCENARIO_KEYS = {
-    "[CRITICAL] GPS Teleportation Spoofing (Phantom Courier)": "fraud_gps_spoof.json",
-    "[NOMINAL] Legitimate Delivery Route (Happy Path)": "normal_delivery.json",
-    "[HIGH RISK] Forged POD Photo / Optical Forgery Attack": "fraud_pod_spoof.json",
-    "[CYBER THREAT] Subcontractor API Manifest Scraping (03:00 AM)": "fraud_api_scraping.json",
-}
-
-MITRE_MAPPING = {
-    "fraud_gps_spoof.json": "MITRE ATT&CK: T1056 - Telematics Evasion (Mock Location Injection)",
-    "normal_delivery.json": "MITRE ATT&CK: None - Nominal Delivery Protocol",
-    "fraud_pod_spoof.json": "MITRE ATT&CK: T1566 - Defense Impairment (Sensor Obscuration & Forgery)",
-    "fraud_api_scraping.json": "MITRE ATT&CK: T1114 - Data Exfiltration (Out-of-Hours Bulk Harvest)",
-}
-
-def load_scenario(filename: str) -> Dict[str, Any]:
-    path = DATA_DIR / filename
-    if not path.exists():
-        st.error(f"Scenario file {filename} not found.")
-        return {}
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
 # Initialize Session State
 if "orchestrator" not in st.session_state:
     st.session_state.orchestrator = AegisNodeOrchestrator()
-if "active_scenario_file" not in st.session_state:
-    st.session_state.active_scenario_file = "fraud_gps_spoof.json"
-if "tamper_simulated" not in st.session_state:
-    st.session_state.tamper_simulated = False
-if "show_handset" not in st.session_state:
-    st.session_state.show_handset = True
 if "supervisor_action" not in st.session_state:
     st.session_state.supervisor_action = None
 if "otp_cleared" not in st.session_state:
     st.session_state.otp_cleared = False
-
-def select_scenario(filename: str):
-    """Sets active scenario and resets transient state."""
-    st.session_state.active_scenario_file = filename
-    st.session_state.otp_cleared = False
-    st.session_state.supervisor_action = None
+if "show_handset" not in st.session_state:
+    st.session_state.show_handset = False
 
 # --- SIDEBAR NAVIGATION & CONTROLLER ---
 with st.sidebar:
@@ -115,6 +89,10 @@ with st.sidebar:
     side_lon = bridge_status_data.get("courier_lon", 100.9781)
     side_label = bridge_status_data.get("courier_location_label", "UTP Campus, Perak")
     side_action = bridge_status_data.get("courier_action", "STANDBY")
+    has_photo = bridge_status_data.get("has_live_photo", False)
+    photo_stat = bridge_status_data.get("live_photo_status", "NONE")
+
+    photo_pill = f"<span style='color:#10B981; font-weight:700;'>{photo_stat}</span>" if has_photo else "<span style='color:#64748B;'>NONE</span>"
 
     render_html(f"""
     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px;">
@@ -125,8 +103,8 @@ with st.sidebar:
         <div style="color: #94A3B8; margin-top: 4px;">Phone GPS Fix:</div>
         <div style="color: #38BDF8; font-family: monospace; font-size:10px;">{side_lat:.4f} N, {side_lon:.4f} E</div>
         <div style="color: #64748B; font-size:10px; margin-top:2px;">{side_label[:24]}</div>
-        <div style="color: #94A3B8; margin-top: 4px;">Handset Action: <span style="color:#10B981; font-weight:700;">{side_action}</span></div>
-        <div style="color: #94A3B8; margin-top: 4px;">Open on phone for field demo:</div>
+        <div style="color: #94A3B8; margin-top: 4px;">Action: <span style="color:#10B981; font-weight:700;">{side_action}</span> | Photo: {photo_pill}</div>
+        <div style="color: #94A3B8; margin-top: 4px;">Direct Phone Access URL:</div>
         <div style="color: #38BDF8; font-family: monospace; font-size:10px; margin-top: 2px;">?mode=courier</div>
     </div>
     """)
@@ -136,22 +114,73 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.markdown("#### **Active Courier Mission**")
+    st.markdown("#### **Active Consignment Mission**")
     st.write("**Consignment:** `#GDX-SHP-20261003-042`")
     st.write("**Courier:** Ahmad Farhan (`CR-9042`)")
     st.write("**Vehicle:** Honda EX5 (Motorcycle)")
     st.write("**Cargo Value:** `RM 1,850.00` (iPhone 17 Pro)")
     st.write("**Base Hub:** UTP Main Gate (Tronoh, Perak)")
-    st.write("**Delivery Target:** Chancellor Hall, UTP")
+    st.write("**Target Handover:** Chancellor Hall, UTP")
 
     st.markdown("---")
-    st.markdown("#### **Handset Control Mode**")
-    st.caption("Demonstration is driven live via courier smartphone (?mode=courier).")
+    st.markdown("#### **Kinematics & Threat Injector**")
+    st.caption("Test how the ReAct Agent responds to simulated telematics changes:")
 
+    target_choice = st.selectbox(
+        "Destination Target",
+        options=[
+            "Menara PJX, Petaling Jaya (185.3 km)",
+            "KLCC Twin Towers, Kuala Lumpur (198.5 km)",
+            "Ipoh Station 18 Hub, Perak (32.4 km)"
+        ]
+    )
+    duration_choice = st.selectbox(
+        "Transit Duration",
+        options=[
+            "2.0 min (Teleportation -> ~5,500 km/h)",
+            "15.0 min (High-Speed Vehicle -> ~740 km/h)",
+            "120.0 min (Feasible Highway -> ~92 km/h)"
+        ]
+    )
 
-    run_sim = st.button("Run Telemetry Analysis", use_container_width=True, type="primary")
-    animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=True, help="Simulates multi-agent scanning latency")
-    st.session_state.show_handset = st.checkbox("Courier Handset Preview", value=st.session_state.show_handset)
+    dest_coords = {
+        "Menara PJX, Petaling Jaya (185.3 km)": (3.103200, 101.644500, "Menara PJX, Petaling Jaya"),
+        "KLCC Twin Towers, Kuala Lumpur (198.5 km)": (3.157800, 101.711800, "KLCC, Kuala Lumpur"),
+        "Ipoh Station 18 Hub, Perak (32.4 km)": (4.551200, 101.071800, "Ipoh Station 18, Perak"),
+    }
+    dur_mins = {
+        "2.0 min (Teleportation -> ~5,500 km/h)": 2.0,
+        "15.0 min (High-Speed Vehicle -> ~740 km/h)": 15.0,
+        "120.0 min (Feasible Highway -> ~92 km/h)": 120.0,
+    }
+
+    if st.button("Inject Kinematic Test", use_container_width=True, type="secondary"):
+        t_lat, t_lon, t_lbl = dest_coords[target_choice]
+        d_min = dur_mins[duration_choice]
+        trigger_gps_spoof(
+            start_lat=side_lat,
+            start_lon=side_lon,
+            target_lat=t_lat,
+            target_lon=t_lon,
+            start_label=side_label,
+            target_label=t_lbl,
+            elapsed_minutes=d_min
+        )
+        st.rerun()
+
+    c_rst1, c_rst2 = st.columns(2)
+    with c_rst1:
+        if st.button("Clean Route", use_container_width=True):
+            update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
+            st.rerun()
+    with c_rst2:
+        if st.button("Reset State", use_container_width=True):
+            reset_live_state()
+            st.rerun()
+
+    st.markdown("---")
+    animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=False, help="Simulates multi-agent scanning latency")
+    st.session_state.show_handset = st.checkbox("Preview Courier Handset in Tab", value=st.session_state.show_handset)
 
 # --- MAIN DASHBOARD HEADER ---
 shield_head_svg = get_svg_icon("shield", color="#38BDF8", size=22)
@@ -182,29 +211,17 @@ render_html("""
 </div>
 """)
 
-# Real-Time Mobile Bridge Synchronizer (Crash-Proof, Zero Race Conditions)
+# Synchronize Live Bridge Telematics
 bridge_state = get_live_state()
-last_bridge_ts = st.session_state.get("last_bridge_ts", 0.0)
-curr_bridge_ts = bridge_state.get("last_action_timestamp", 0.0)
-
-# Synchronize scenario if phone action is newer
-if curr_bridge_ts > last_bridge_ts and curr_bridge_ts > 0:
-    st.session_state.last_bridge_ts = curr_bridge_ts
-    target_scn = bridge_state.get("active_scenario")
-    if target_scn and target_scn != st.session_state.active_scenario_file:
-        st.session_state.active_scenario_file = target_scn
-    if bridge_state.get("otp_verified"):
-        st.session_state.otp_cleared = True
-elif bridge_state.get("otp_verified") and not st.session_state.otp_cleared:
-    st.session_state.otp_cleared = True
-
-# Live Field Handset Status Bar
 handset_lat = bridge_state.get("courier_lat", 4.3852)
 handset_lon = bridge_state.get("courier_lon", 100.9781)
 handset_label = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")
 handset_act = bridge_state.get("courier_action", "STANDBY")
 has_photo = bridge_state.get("has_live_photo", False)
 photo_stat = bridge_state.get("live_photo_status", "NONE")
+
+if bridge_state.get("otp_verified"):
+    st.session_state.otp_cleared = True
 
 col_br1, col_br2 = st.columns([3, 1])
 with col_br1:
@@ -221,7 +238,7 @@ with col_br2:
     if st.button("Sync Handset Feed", use_container_width=True, help="Synchronize telemetry state with courier smartphone"):
         st.rerun()
 
-# Run Orchestrator Pipeline on Live Telematics Mission
+# Run Autonomous Orchestrator Pipeline on Live Telematics Mission
 scenario_data = build_live_scenario_data(bridge_state)
 result = st.session_state.orchestrator.process_shipment(scenario_data)
 
@@ -230,7 +247,7 @@ investigator = result["investigator"]
 warden = result["warden"]
 ledger_status = result["ledger_status"]
 
-# If OTP was cleared by user interaction for the Step-Up scenario, update warden state
+# If OTP was cleared by user interaction, release delivery
 if (st.session_state.otp_cleared or bridge_state.get("otp_verified")) and bridge_state.get("courier_action") in ("TRIGGER_POD_FORGERY", "SUBMIT_OTP"):
     warden = dict(warden)
     warden["action"] = "AUTO_CLEAR"
@@ -252,19 +269,19 @@ update_warden_state(
     otp_verified=st.session_state.otp_cleared or bridge_state.get("otp_verified", False)
 )
 
-# Latency Mode Simulation
-if run_sim and animate_pitch and sentinel.get("anomalies_detected", False):
+# Optional Latency Animation
+if animate_pitch and sentinel.get("anomalies_detected", False):
     with st.spinner("Sentinel scanning telemetry pings..."):
-        time.sleep(0.7)
+        time.sleep(0.4)
     with st.spinner("Investigator verifying kinematics & POD heuristics..."):
-        time.sleep(1.1)
+        time.sleep(0.6)
 
 # --- INCIDENT BRIEFING CARD (CONTEXTUAL FACTS, NO AI SLOP) ---
 is_api_scenario = "subcontractor_id" in scenario_data
 warden_act = warden.get("action", "AUTO_CLEAR")
 
 courier_act = bridge_state.get("courier_action", "STANDBY")
-live_spd = bridge_state.get("highest_velocity_kmh", float(sentinel.get("highest_velocity_kmh", 32.0)))
+live_spd = bridge_state.get("highest_velocity_kmh", float(sentinel.get("highest_velocity_kmh", 30.0)))
 live_dist = bridge_state.get("spoof_distance_km", 185.3)
 origin_lbl = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")
 dest_lbl = bridge_state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
@@ -279,11 +296,11 @@ if courier_act == "TRIGGER_GPS_SPOOF":
     status_class = "status-freeze"
     target_id = f"#{scenario_data.get('shipment_id', 'GDX-SHP-20261003-042')}"
     subject_label = f"{scenario_data.get('courier_name', 'Ahmad Farhan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
-    telemetry_fact = f"Peak Speed: {live_spd:.0f} km/h (Physically Impossible)"
+    telemetry_fact = f"Calculated Velocity: {live_spd:.0f} km/h (Physically Impossible)"
     cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 1850):.2f}"
     summary_text = (
         f"Courier telematics recorded a {live_dist:.1f} km coordinate leap from {origin_lbl} to {dest_lbl} "
-        f"in under 2.0 minutes ({live_spd:.0f} km/h). Real physical road transit requires a minimum of 145 minutes via OSRM. "
+        f"at an effective speed of {live_spd:.0f} km/h without cellular baseband handoff. "
         f"Autonomous delivery hold executed by Warden."
     )
 elif courier_act == "TRIGGER_POD_FORGERY" or (has_live_photo and live_photo_stat == "FORGED"):
@@ -323,7 +340,7 @@ else:
     subject_label = f"{scenario_data.get('courier_name', 'Ahmad Farhan')} ({scenario_data.get('courier_vehicle', 'Motorcycle')})"
     telemetry_fact = f"Average Speed: {live_spd:.0f} km/h (Nominal Campus Speed Limit)"
     cargo_fact = f"RM {scenario_data.get('parcel_value_myr', 1850):.2f}"
-    summary_text = "All 4 telematics checkpoints align with OpenStreetMap road kinematics on UTP campus roads and verified cell tower handoffs. Zero anomaly detected. Delivery cleared for customer handover."
+    summary_text = "All telematics checkpoints align with OpenStreetMap road kinematics on UTP campus roads and verified cell tower handoffs. Zero anomaly detected. Delivery cleared for customer handover."
 
 render_html(f"""
 <div class="incident-briefing">
@@ -360,7 +377,7 @@ render_html(f"""
 </div>
 """)
 
-# --- PROGRESSIVE DISCLOSURE TABS (NO COGNITIVE OVERLOAD) ---
+# --- PROGRESSIVE DISCLOSURE TABS ---
 tab_evidence, tab_decision, tab_ledger = st.tabs([
     "Spatial & Sensor Evidence",
     "Agent Triage & Policy Enforcement",
@@ -406,7 +423,7 @@ with tab_evidence:
                         "Seq": f"#{ev.get('sequence')}",
                         "Event": ev.get("event_type"),
                         "Location": ev.get("location", {}).get("label"),
-                        "Speed": f"{ev.get('speed_kmh', 0)} km/h",
+                        "Speed": f"{ev.get('speed_kmh', 0):.0f} km/h",
                         "Tower ID": ev.get("cell_tower_id", "-"),
                     })
                 df_events = pd.DataFrame(table_rows)
@@ -510,8 +527,9 @@ with tab_decision:
             </div>
             """)
 
-        if st.session_state.active_scenario_file == "fraud_pod_spoof.json":
-            if not st.session_state.otp_cleared:
+        # OTP Gate
+        if warden_act == "STEP_UP_CHALLENGE" or bridge_state.get("courier_action") in ("TRIGGER_POD_FORGERY", "SUBMIT_OTP"):
+            if not st.session_state.otp_cleared and not bridge_state.get("otp_verified"):
                 render_html("""
                 <div style="font-size:11px; font-weight:700; color:#F59E0B; margin-top:8px; margin-bottom:4px; font-family:'JetBrains Mono', monospace;">
                     [CHALLENGE GATE] Recipient OTP Step-Up Authentication
@@ -529,6 +547,7 @@ with tab_decision:
                     if st.button("Authorize Delivery", use_container_width=True, type="primary"):
                         if otp_code.strip() in ("849201", "123456") or (len(otp_code.strip()) == 6 and otp_code.strip().isdigit()):
                             st.session_state.otp_cleared = True
+                            update_courier_action("SUBMIT_OTP", "normal_delivery.json", otp_code=otp_code.strip())
                             st.rerun()
                         else:
                             st.error("Invalid OTP code. Try 849201.")
@@ -538,9 +557,6 @@ with tab_decision:
                     <span style="font-size:11px; color:#A7F3D0; font-weight:600; font-family:'JetBrains Mono', monospace;">[CHALLENGE RESOLVED] Customer verified OTP 849201. Consignment release approved.</span>
                 </div>
                 """)
-                if st.button("Reset Challenge Demo", use_container_width=False):
-                    st.session_state.otp_cleared = False
-                    st.rerun()
 
         with st.expander("Supervisor Controls & Manual Override", expanded=False):
             st.markdown(
@@ -568,6 +584,59 @@ with tab_decision:
             """)
             render_courier_handset(scenario_data, warden)
 
+    # --- AUTONOMOUS MULTI-AGENT REACT EXECUTION TRACE (EXPLAINABLE AI ENGINE) ---
+    render_html("""
+    <div class="panel-header" style="margin-top:24px;">
+        <span>Autonomous Multi-Agent ReAct Execution Trace (AI Governance & Explainability)</span>
+    </div>
+    """)
+    st.caption("Step-by-step Thought -> Tool Action -> Observation -> Decision trace demonstrating non-black-box agentic reasoning.")
+
+    react_steps = investigator.get("react_trace", [])
+    if react_steps:
+        for st_item in react_steps:
+            st_num = st_item.get("step", 1)
+            st_tool = st_item.get("tool", "tool_unknown")
+            st_status = st_item.get("status", "PASS")
+            st_thought = st_item.get("thought", "")
+            st_input = st_item.get("tool_input", {})
+            st_obs = st_item.get("observation", {})
+            st_finding = st_item.get("finding", "")
+
+            badge_color = "#EF4444" if st_status == "VIOLATION" else "#10B981"
+            badge_bg = "rgba(239,68,68,0.15)" if st_status == "VIOLATION" else "rgba(16,185,129,0.15)"
+
+            render_html(f"""
+            <div style="background: #0B0F17; border: 1px solid #1E293B; border-left: 4px solid {badge_color}; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800; color:#38BDF8;">STEP {st_num}:</span>
+                        <code style="color:#A78BFA; background:rgba(167,139,250,0.1); padding:2px 6px; border-radius:4px; font-size:11px;">{st_tool}()</code>
+                    </div>
+                    <span style="background:{badge_bg}; color:{badge_color}; border:1px solid {badge_color}; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; font-family:monospace;">
+                        [{st_status}]
+                    </span>
+                </div>
+                <div style="font-size:12px; color:#CBD5E1; margin-bottom:6px;">
+                    <b style="color:#94A3B8;">[THOUGHT]:</b> {st_thought}
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:6px; font-size:11px;">
+                    <div style="background:#111827; padding:8px 10px; border-radius:6px; border:1px solid #1F2937;">
+                        <span style="color:#94A3B8; font-weight:700;">TOOL ARGUMENTS:</span>
+                        <pre style="margin:4px 0 0 0; color:#E2E8F0; font-size:10px; font-family:monospace; white-space:pre-wrap;">{json.dumps(st_input, indent=2)}</pre>
+                    </div>
+                    <div style="background:#111827; padding:8px 10px; border-radius:6px; border:1px solid #1F2937;">
+                        <span style="color:#94A3B8; font-weight:700;">OBSERVATION:</span>
+                        <pre style="margin:4px 0 0 0; color:#E2E8F0; font-size:10px; font-family:monospace; white-space:pre-wrap;">{json.dumps(st_obs, indent=2)}</pre>
+                    </div>
+                </div>
+                <div style="font-size:11px; color:#F8FAFC; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:4px;">
+                    <b style="color:#38BDF8;">[FORENSIC FINDING]:</b> {st_finding}
+                </div>
+            </div>
+            """)
+
+    # Multi-Agent Architecture Pipeline Summary Cards
     render_html("""
     <div class="panel-header" style="margin-top:24px;">
         <span>SOAR Automated Multi-Agent Pipeline</span>
@@ -635,4 +704,3 @@ with tab_decision:
 
 with tab_ledger:
     render_cryptographic_ledger(result["audit_trail"], ledger_status)
-
