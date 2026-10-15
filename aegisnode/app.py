@@ -20,7 +20,8 @@ import streamlit as st
 import pandas as pd
 
 from aegisnode.agents.orchestrator import AegisNodeOrchestrator
-from aegisnode.agents.ledger import AuditLedger
+from aegisnode.agents.ledger import AuditLedger, LEDGER_STORE_PATH
+from aegisnode.agents.otp_service import get_otp_service
 from aegisnode.ui.styles import get_custom_css, get_svg_icon, render_html
 from aegisnode.ui.charts import (
     build_gauge_chart,
@@ -63,11 +64,14 @@ if mode_param in ("courier", "phone", "driver") or view_param in ("handset", "ph
 
 # Initialize Session State
 if "orchestrator" not in st.session_state:
-    st.session_state.orchestrator = AegisNodeOrchestrator()
+    st.session_state.ledger = AuditLedger(storage_path=LEDGER_STORE_PATH)
+    st.session_state.orchestrator = AegisNodeOrchestrator(ledger=st.session_state.ledger)
 if "supervisor_action" not in st.session_state:
     st.session_state.supervisor_action = None
 if "otp_cleared" not in st.session_state:
     st.session_state.otp_cleared = False
+if "otp_err_msg" not in st.session_state:
+    st.session_state.otp_err_msg = None
 if "show_handset" not in st.session_state:
     st.session_state.show_handset = False
 
@@ -247,17 +251,17 @@ investigator = result["investigator"]
 warden = result["warden"]
 ledger_status = result["ledger_status"]
 
-# If OTP was cleared by user interaction, release delivery
+# If OTP was cleared by verified user interaction, release delivery
 if (st.session_state.otp_cleared or bridge_state.get("otp_verified")) and bridge_state.get("courier_action") in ("TRIGGER_POD_FORGERY", "SUBMIT_OTP"):
     warden = dict(warden)
     warden["action"] = "AUTO_CLEAR"
     warden["banner_title"] = "Consignment Released via Verified Recipient OTP"
     warden["message"] = "Customer verified physical receipt via 6-digit cryptographic challenge. Consignment handed over and driver payout released."
     warden["actions_taken"] = [
-        "Interactive OTP code 849201 verified against recipient session",
+        "Cryptographic HMAC-SHA256 OTP verified against recipient session",
         "Warden release latch unsealed",
         "Driver commission RM 4.50 cleared for batch settlement",
-        "Cryptographic ledger state updated"
+        "Verification state committed to immutable cryptographic audit ledger"
     ]
 
 # Synchronize current Warden policy decision back to phone handset
@@ -528,6 +532,13 @@ with tab_decision:
             """)
 
         # OTP Gate
+        shipment_id = scenario_data.get("shipment_id", "GDX-SHP-20261003-042")
+        otp_service = get_otp_service()
+        active_sim_otp = otp_service.get_active_plain_otp_for_sms_simulation(shipment_id)
+        if not active_sim_otp and (warden_act == "STEP_UP_CHALLENGE" or bridge_state.get("courier_action") in ("TRIGGER_POD_FORGERY", "SUBMIT_OTP")):
+            otp_service.generate_challenge(shipment_id, "0128910423")
+            active_sim_otp = otp_service.get_active_plain_otp_for_sms_simulation(shipment_id)
+
         if warden_act == "STEP_UP_CHALLENGE" or bridge_state.get("courier_action") in ("TRIGGER_POD_FORGERY", "SUBMIT_OTP"):
             if not st.session_state.otp_cleared and not bridge_state.get("otp_verified"):
                 render_html("""
@@ -535,26 +546,37 @@ with tab_decision:
                     [CHALLENGE GATE] Recipient OTP Step-Up Authentication
                 </div>
                 """)
+                if active_sim_otp:
+                    st.info(f"[SMS SIMULATION] Recipient Sarah Lim (+60 12-*** 8892) received challenge passcode: {active_sim_otp}")
                 c_otp1, c_otp2 = st.columns([3, 2])
                 with c_otp1:
                     otp_code = st.text_input(
                         "Recipient 6-digit SMS OTP",
-                        placeholder="Enter 849201",
+                        placeholder="Enter 6-digit SMS code",
                         label_visibility="collapsed",
                         key="otp_input_box"
                     )
                 with c_otp2:
                     if st.button("Authorize Delivery", use_container_width=True, type="primary"):
-                        if otp_code.strip() in ("849201", "123456") or (len(otp_code.strip()) == 6 and otp_code.strip().isdigit()):
+                        clean_otp = otp_code.strip()
+                        v_res = st.session_state.orchestrator.verify_shipment_otp(shipment_id, clean_otp)
+                        if v_res.get("valid"):
                             st.session_state.otp_cleared = True
-                            update_courier_action("SUBMIT_OTP", "normal_delivery.json", otp_code=otp_code.strip())
+                            st.session_state.otp_err_msg = None
+                            update_courier_action("SUBMIT_OTP", "normal_delivery.json", otp_code=clean_otp)
                             st.rerun()
                         else:
-                            st.error("Invalid OTP code. Try 849201.")
+                            st.session_state.otp_cleared = False
+                            st.session_state.otp_err_msg = v_res.get("message", "Invalid OTP code.")
+                            update_courier_action("SUBMIT_OTP", "fraud_pod_spoof.json", otp_code=clean_otp)
+                            st.rerun()
+
+                if st.session_state.get("otp_err_msg"):
+                    st.error(st.session_state["otp_err_msg"])
             else:
                 render_html("""
                 <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:10px 14px; margin-top:8px; margin-bottom:8px;">
-                    <span style="font-size:11px; color:#A7F3D0; font-weight:600; font-family:'JetBrains Mono', monospace;">[CHALLENGE RESOLVED] Customer verified OTP 849201. Consignment release approved.</span>
+                    <span style="font-size:11px; color:#A7F3D0; font-weight:600; font-family:'JetBrains Mono', monospace;">[CHALLENGE RESOLVED] Customer verified OTP via HMAC-SHA256 handshake. Consignment release approved and recorded in audit ledger.</span>
                 </div>
                 """)
 

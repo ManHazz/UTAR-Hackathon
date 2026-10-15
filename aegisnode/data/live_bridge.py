@@ -1,7 +1,7 @@
 """
 AegisNode - Live Multi-Device State Bridge
 Enables atomic synchronization between physical driver smartphones and the SOC Command Center.
-Supports real hardware GPS capture, phone camera POD photo ingestion, and kinematic spoof evaluation.
+Integrates fail-closed photo forensics, dynamic HMAC OTP verification, and kinematic spoof evaluation.
 Strict enterprise compliance - Zero Emojis.
 """
 
@@ -13,6 +13,9 @@ import base64
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, Optional, List
+
+from aegisnode.agents.otp_service import get_otp_service
+from aegisnode.agents.photo_forensics import get_photo_engine
 
 BRIDGE_FILE = Path(__file__).resolve().parent / "live_bridge.json"
 POD_CAPTURE_FILE = Path(__file__).resolve().parent / "live_pod_capture.jpg"
@@ -236,8 +239,8 @@ def trigger_gps_spoof(
     simulated_hours = max(float(elapsed_minutes) / 60.0, 0.0005)
     calc_speed = round(dist_km / simulated_hours, 1)
 
-    # Velocity threshold: city traffic exceeding 150 km/h is physically impossible
-    is_impossible = calc_speed > 150.0
+    # Velocity threshold: city traffic exceeding 110 km/h is physically anomalous
+    is_impossible = calc_speed > 110.0
 
     state["courier_action"] = "TRIGGER_GPS_SPOOF" if is_impossible else "TRIGGER_NORMAL_DELIVERY"
     state["active_scenario"] = "fraud_gps_spoof.json" if is_impossible else "normal_delivery.json"
@@ -273,11 +276,12 @@ def trigger_gps_spoof(
 
 def process_uploaded_pod_photo(
     image_bytes: bytes,
-    force_forgery: bool = False
+    force_forgery: bool = False,
+    shipment_id: str = "GDX-SHP-20261003-042"
 ) -> Dict[str, Any]:
     """
     Saves live photo taken from courier smartphone camera to disk and computes optical forensics.
-    Measures Laplacian edge variance and luminance to catch low-detail floor mat captures.
+    Enforces strict FAIL-CLOSED analysis via PhotoForensicsEngine.
     """
     try:
         with open(POD_CAPTURE_FILE, "wb") as f:
@@ -285,28 +289,11 @@ def process_uploaded_pod_photo(
     except Exception:
         pass
 
-    variance = 0.0
-    brightness = 0.0
-    status = "VALID"
+    forensics = get_photo_engine().analyze_photo_bytes(image_bytes, shipment_id=shipment_id)
 
-    try:
-        import cv2
-        import numpy as np
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is not None:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            variance = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-            brightness = float(np.mean(gray))
-            # Suspicious if blurred, uniform darkness, or floor mat low texture (< 55.0 variance)
-            if variance < 55.0 or brightness < 35.0:
-                status = "FORGED"
-            else:
-                status = "VALID"
-    except Exception:
-        variance = 72.4
-        brightness = 115.0
-        status = "VALID"
+    status = forensics["photo_status"]
+    variance = forensics["variance"]
+    brightness = forensics["brightness"]
 
     if force_forgery:
         status = "FORGED"
@@ -321,26 +308,20 @@ def process_uploaded_pod_photo(
     state["live_photo_brightness"] = round(brightness, 1)
     state["last_action_timestamp"] = time.time()
 
-    if status == "FORGED":
+    if status != "VALID":
         state["courier_action"] = "TRIGGER_POD_FORGERY"
         state["active_scenario"] = "fraud_pod_spoof.json"
         state["warden_action"] = "STEP_UP_CHALLENGE"
         state["trust_score"] = 48
         state["otp_verified"] = False
-        state["last_message"] = (
-            f"Optical POD flagged as forged (Laplacian variance {variance:.1f} < 55.0). "
-            f"Warden suspended payout. Customer OTP verification required."
-        )
+        state["last_message"] = f"Optical POD alert ({status}): {forensics.get('message', 'Texture check failed')}."
     else:
         state["courier_action"] = "TRIGGER_NORMAL_DELIVERY"
         state["active_scenario"] = "normal_delivery.json"
         state["warden_action"] = "AUTO_CLEAR"
         state["trust_score"] = 98
         state["otp_verified"] = False
-        state["last_message"] = (
-            f"Optical POD verified (Laplacian variance {variance:.1f} >= 55.0). "
-            f"Zero-trust check passed. Payout approved."
-        )
+        state["last_message"] = "Optical POD verified (Laplacian variance >= 55.0). Zero-trust check passed."
 
     _save_state(state)
     return state
@@ -375,14 +356,29 @@ def update_courier_action(
         state["live_photo_status"] = "FORGED"
         state["live_photo_variance"] = 14.2
         state["last_message"] = "Proof-of-delivery flagged as forged floor mat. Customer OTP required."
+        otp_service = get_otp_service()
+        otp_service.generate_challenge("GDX-SHP-20261003-042", "0128910423")
     elif action == "SUBMIT_OTP":
-        if otp_code.strip() in ("849201", "123456") or (len(otp_code.strip()) == 6 and otp_code.strip().isdigit()):
+        shipment_id = "GDX-SHP-20261003-042"
+        otp_service = get_otp_service()
+        if not otp_service.get_challenge_status(shipment_id):
+            otp_service.generate_challenge(shipment_id, "0128910423")
+        v_res = otp_service.verify_otp(shipment_id, otp_code)
+        if v_res["valid"]:
             state["warden_action"] = "AUTO_CLEAR"
-            state["trust_score"] = 85
+            state["trust_score"] = 88
             state["otp_verified"] = True
-            state["last_message"] = f"Customer OTP {otp_code} verified. Consignment unsealed and payout approved."
+            state["last_message"] = "Customer OTP verified via HMAC challenge token. Delivery release approved."
+        elif v_res["status"] == "LOCKED":
+            state["warden_action"] = "PACKAGE_FREEZE"
+            state["trust_score"] = 10
+            state["otp_verified"] = False
+            state["last_message"] = v_res["message"]
         else:
-            state["last_message"] = f"Invalid OTP code [{otp_code}]. Recipient authorization failed."
+            state["warden_action"] = "STEP_UP_CHALLENGE"
+            state["trust_score"] = 42
+            state["otp_verified"] = False
+            state["last_message"] = v_res["message"]
     elif action == "TRIGGER_API_HARVEST":
         state["warden_action"] = "API_CREDENTIAL_REVOKED"
         state["trust_score"] = 10
@@ -408,7 +404,6 @@ def update_warden_state(
 ):
     """Synchronizes SOC Warden policy decisions back to the driver handset without redundant writes."""
     state = get_live_state()
-    # Guard against write cycles if nothing changed
     if (
         state.get("warden_action") == warden_action
         and state.get("trust_score") == trust_score
@@ -442,7 +437,6 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
 
     courier_action = state.get("courier_action", "STANDBY")
 
-    # If API harvesting attack simulated
     if courier_action == "TRIGGER_API_HARVEST":
         data_dir = Path(__file__).resolve().parent
         api_path = data_dir / "fraud_api_scraping.json"
@@ -498,6 +492,7 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
         "parcel_value_myr": 1850.00,
         "parcel_category": "High-Value Consumer Electronics (iPhone 17 Pro)",
         "recipient_name": "Sarah Lim",
+        "recipient_phone": "0128910423",
         "delivery_address": "Chancellor Hall, Universiti Teknologi PETRONAS, 32610 Seri Iskandar, Perak",
         "expected_destination": {
             "lat": dest_lat,
@@ -533,31 +528,11 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
                 "label": pt_lbl
             },
             "speed_kmh": pt_spd,
-            "cell_tower_id": "TWR-UTP-01"
+            "cell_tower_id": "SIM-TWR-UTP-01"
         })
-
-    # If current courier location differs from the last history point by > 30 meters, append it
-    if events:
-        last_ev = events[-1]
-        dist_cur = haversine_distance_km(last_ev["location"]["lat"], last_ev["location"]["lon"], cur_lat, cur_lon)
-        if dist_cur > 0.03:
-            last_t = datetime.fromisoformat(last_ev["timestamp"])
-            events.append({
-                "sequence": len(events) + 1,
-                "timestamp": (last_t + timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S"),
-                "event_type": "TRANSIT_PING",
-                "location": {
-                    "lat": cur_lat,
-                    "lon": cur_lon,
-                    "label": f"Courier Live Fix: {cur_label}"
-                },
-                "speed_kmh": 30.0,
-                "cell_tower_id": "TWR-UTP-01"
-            })
 
     # Terminal event based on courier action:
     if courier_action == "TRIGGER_GPS_SPOOF":
-        # Coordinate jump across Malaysia
         target_lat = state.get("spoof_target_lat", 3.103200)
         target_lon = state.get("spoof_target_lon", 101.644500)
         target_label = state.get("spoof_target_label", "Menara PJX, Petaling Jaya")
@@ -575,11 +550,11 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
                 "label": f"Spoofed Destination: {target_label}"
             },
             "speed_kmh": spd,
-            "cell_tower_id": "TWR-UTP-01",  # Same cell tower ID triggers cellular baseband lock anomaly
+            "cell_tower_id": "SIM-TWR-UTP-01",  # Same cell tower ID triggers cellular baseband lock anomaly
             "note": f"Coordinate jump of {state.get('spoof_distance_km', 185.3)} km in {elapsed_min} min without tower handoff"
         })
     else:
-        pod_stat = "FORGED" if (courier_action == "TRIGGER_POD_FORGERY" or photo_status == "FORGED") else "VALID"
+        pod_stat = "FORGED" if (courier_action == "TRIGGER_POD_FORGERY" or photo_status in ("FORGED", "REPLAY_ATTACK", "DECODE_FAILURE", "TEXTURE_DEFICIT")) else "VALID"
         last_t = datetime.fromisoformat(events[-1]["timestamp"]) if events else base_time
         deliv_t = (last_t + timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S")
         events.append({
@@ -592,7 +567,7 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
                 "label": f"Delivery Handover ({cur_label})"
             },
             "speed_kmh": 0.0,
-            "cell_tower_id": "TWR-UTP-02",
+            "cell_tower_id": "SIM-TWR-UTP-02",
             "pod_evidence": {
                 "photo_status": pod_stat,
                 "vision_anomaly_score": 0.92 if pod_stat == "FORGED" else 0.04,

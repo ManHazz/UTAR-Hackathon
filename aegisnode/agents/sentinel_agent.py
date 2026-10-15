@@ -1,7 +1,8 @@
 """
 AegisNode - Sentinel Agent (Fast Telemetry & Access Scanner)
 Monitors incoming GPS telemetry, telematics, and subcontractor API calls.
-Detects physical impossibilities and telemetry spoofing indicators.
+Detects physical impossibilities, short-hop teleportation, and fails closed on missing data.
+Strict enterprise compliance - Zero Emojis.
 """
 
 from datetime import datetime
@@ -9,14 +10,31 @@ from typing import Dict, Any, List, Optional
 from .osrm_service import haversine_distance_km
 from .ledger import AuditLedger
 
+def _parse_timestamp_seconds(ts_val: Any) -> float:
+    """Safely normalizes string, float, or int ISO timestamps to UTC epoch seconds."""
+    if isinstance(ts_val, (int, float)):
+        return float(ts_val)
+    if not isinstance(ts_val, str) or not ts_val.strip():
+        return 0.0
+    try:
+        clean_ts = ts_val.strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_ts)
+        return dt.timestamp()
+    except Exception:
+        return 0.0
+
 class SentinelAgent:
-    """First line of defense: high-throughput anomaly detector."""
+    """First line of defense: high-throughput anomaly detector with fail-closed security."""
 
     def __init__(self, ledger: Optional[AuditLedger] = None):
         self.ledger = ledger
 
     def scan_telemetry(self, scenario_data: Dict[str, Any]) -> Dict[str, Any]:
         """Scans courier delivery events for physical and metadata red flags."""
+        # Handle API scraping scenario if present
+        if "subcontractor_id" in scenario_data:
+            return self._scan_api_access(scenario_data)
+
         events = scenario_data.get("events", [])
         flags: List[str] = []
         anomalies_detected = False
@@ -25,36 +43,64 @@ class SentinelAgent:
         dwell_suspicion = False
         pod_flagged = False
 
-        # Handle API scraping scenario if present
-        if "subcontractor_id" in scenario_data:
-            return self._scan_api_access(scenario_data)
+        # Rule 1: Fail closed on zero telemetry events
+        if not events or len(events) == 0:
+            anomalies_detected = True
+            flags.append("MISSING_TELEMETRY: Shipment contains zero telemetry events. Failing closed.")
+            report = {
+                "agent": "SentinelAgent",
+                "status": "FLAGGED",
+                "anomalies_detected": True,
+                "primary_trigger": "MISSING_TELEMETRY",
+                "shipment_id": scenario_data.get("shipment_id", "UNKNOWN"),
+                "courier_id": scenario_data.get("courier_id", "UNKNOWN"),
+                "highest_velocity_kmh": 0.0,
+                "cell_tower_spoof_detected": False,
+                "cell_tower_locked": False,
+                "dwell_anomaly_detected": False,
+                "pod_anomaly_detected": False,
+                "flags": flags,
+                "summary": "CRITICAL: Consignment has zero telematics breadcrumbs. Security quarantine engaged."
+            }
+            if self.ledger:
+                self.ledger.record("SentinelAgent", "SCAN_TELEMETRY", report["shipment_id"], report)
+            return report
 
         for i in range(1, len(events)):
             prev = events[i - 1]
             curr = events[i]
 
-            t_prev = datetime.fromisoformat(prev["timestamp"])
-            t_curr = datetime.fromisoformat(curr["timestamp"])
-            delta_seconds = max((t_curr - t_prev).total_seconds(), 1.0)
+            t_prev_sec = _parse_timestamp_seconds(prev.get("timestamp"))
+            t_curr_sec = _parse_timestamp_seconds(curr.get("timestamp"))
+            delta_seconds = max(t_curr_sec - t_prev_sec, 0.5)
             delta_hours = delta_seconds / 3600.0
 
-            lat1, lon1 = prev["location"]["lat"], prev["location"]["lon"]
-            lat2, lon2 = curr["location"]["lat"], curr["location"]["lon"]
+            loc1 = prev.get("location", {})
+            loc2 = curr.get("location", {})
+
+            # Rule 2: Fail closed on malformed location payloads
+            if "lat" not in loc1 or "lon" not in loc1 or "lat" not in loc2 or "lon" not in loc2:
+                anomalies_detected = True
+                flags.append(f"MALFORMED_TELEMETRY: Checkpoint #{curr.get('sequence', i+1)} missing spatial coordinates.")
+                continue
+
+            lat1, lon1 = float(loc1["lat"]), float(loc1["lon"])
+            lat2, lon2 = float(loc2["lat"]), float(loc2["lon"])
             dist_km = haversine_distance_km(lat1, lon1, lat2, lon2)
 
             speed_kmh = dist_km / delta_hours
             if speed_kmh > highest_velocity_kmh:
                 highest_velocity_kmh = speed_kmh
 
-            # Rule 1: Impossible Physical Velocity (>120 km/h in urban Selangor/KL)
-            if speed_kmh > 120.0 and dist_km > 3.0:
+            # Rule 3: Physical Velocity Anomaly (any jump > 0.05 km exceeding 110 km/h in urban Malaysia)
+            if dist_km >= 0.05 and speed_kmh > 110.0:
                 anomalies_detected = True
                 flags.append(
-                    f"IMPOSSIBLE VELOCITY: Traveled {dist_km:.1f} km in {delta_seconds/60:.1f} min "
+                    f"IMPOSSIBLE VELOCITY: Traveled {dist_km:.2f} km in {delta_seconds:.0f}s "
                     f"(Calculated Speed: {speed_kmh:.0f} km/h)"
                 )
 
-            # Rule 2: Cell Tower Discrepancy (GPS moved >5km but connected cell tower ID did not change)
+            # Rule 4: Cell Tower Lock Anomaly (GPS moved >5km but connected tower ID did not change)
             cell1 = prev.get("cell_tower_id")
             cell2 = curr.get("cell_tower_id")
             if cell1 and cell2 and cell1 == cell2 and dist_km > 5.0:
@@ -62,30 +108,32 @@ class SentinelAgent:
                 anomalies_detected = True
                 flags.append(
                     f"CELL TOWER ANOMALY: GPS moved {dist_km:.1f} km but remained locked to Tower [{cell1}]. "
-                    f"Strong indicator of GPS Mock Location / Software Spoofing."
+                    f"Indicates Android Mock Location software manipulation."
                 )
 
-            # Rule 3: Suspicious Dwell in Industrial/Off-Route area with high-value parcel
-            if "Industrial" in curr.get("location", {}).get("label", "") and scenario_data.get("parcel_value_myr", 0) > 1000:
+            # Rule 5: Suspicious Dwell in Industrial area carrying high-value parcel
+            if "Industrial" in loc2.get("label", "") and scenario_data.get("parcel_value_myr", 0) > 1000:
                 dwell_suspicion = True
                 flags.append(
-                    f"HIGH-RISK DWELL: Stopped in {curr['location']['label']} carrying RM{scenario_data['parcel_value_myr']:.2f} electronics."
+                    f"HIGH-RISK DWELL: Stopped in {loc2.get('label', 'Industrial Zone')} carrying RM{scenario_data.get('parcel_value_myr', 0):.2f} cargo."
                 )
 
-            # Rule 4: POD Evidence verification flag
+            # Rule 6: POD Evidence verification
             pod = curr.get("pod_evidence")
-            if pod and pod.get("photo_status") in ("SUSPICIOUS", "FORGED"):
+            if pod and pod.get("photo_status") in ("SUSPICIOUS", "FORGED", "TEXTURE_DEFICIT", "REPLAY_ATTACK", "DECODE_FAILURE"):
                 pod_flagged = True
                 anomalies_detected = True
                 flags.append(
-                    f"POD INTEGRITY ALERT: Proof-of-Delivery flagged as {pod['photo_status']} ({pod.get('photo_label')})."
+                    f"POD INTEGRITY ALERT: Proof-of-Delivery flagged as {pod['photo_status']}."
                 )
 
-        # Determine primary trigger based on anomaly flags
+        # Primary trigger selection
         primary_trigger = "NONE"
-        if cell_tower_suspicion:
+        if "MISSING_TELEMETRY" in str(flags):
+            primary_trigger = "MISSING_TELEMETRY"
+        elif cell_tower_suspicion:
             primary_trigger = "MOCK_LOCATION_SPOOF"
-        elif highest_velocity_kmh > 120.0:
+        elif highest_velocity_kmh > 110.0:
             primary_trigger = "IMPOSSIBLE_VELOCITY"
         elif pod_flagged:
             primary_trigger = "POD_INTEGRITY_ALERT"
@@ -123,22 +171,32 @@ class SentinelAgent:
         return report
 
     def _scan_api_access(self, scenario_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Scans subcontractor API traffic for anomalous access patterns."""
+        """Scans subcontractor API traffic for anomalous access patterns dynamically."""
         events = scenario_data.get("events", [])
         flags: List[str] = []
         is_flagged = False
+
+        if not events:
+            return {
+                "agent": "SentinelAgent",
+                "status": "FLAGGED",
+                "anomalies_detected": True,
+                "shipment_id": scenario_data.get("subcontractor_id", "API-TARGET"),
+                "flags": ["MISSING_ACCESS_LOGS: No gateway request telemetry provided."],
+                "summary": "CRITICAL: Missing API access telemetry."
+            }
 
         for ev in events:
             rate = ev.get("request_count_per_minute", 0)
             limit = ev.get("standard_rate_limit", 60)
             hour = ev.get("hour_of_day", 12)
 
-            if rate > limit * 3:
+            if rate > limit * 2:
                 is_flagged = True
                 flags.append(f"RATE ABUSE: {rate} req/min exceeds threshold ({limit} req/min)")
-            if hour >= 0 and hour <= 5:
+            if 0 <= hour <= 5:
                 is_flagged = True
-                flags.append(f"OUT-OF-HOURS ACCESS: Bulk manifest export attempted at 0{hour}:00 AM")
+                flags.append(f"OUT-OF-HOURS ACCESS: Bulk manifest export attempted at {hour:02d}:00 AM")
 
         report = {
             "agent": "SentinelAgent",

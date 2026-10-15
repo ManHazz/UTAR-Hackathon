@@ -28,5 +28,9 @@ ehthumbs.db
 .agents/
 AGENTS.md
 
-# Runtime captures
+# Runtime captures and state persistence
 aegisnode/data/live_pod_capture.jpg
+aegisnode/data/live_bridge.json
+aegisnode/data/audit_ledger.json
+aegisnode/data/photo_registry.json
+*.tmp

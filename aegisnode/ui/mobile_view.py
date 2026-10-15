@@ -19,6 +19,7 @@ from aegisnode.data.live_bridge import (
     process_uploaded_pod_photo,
     reset_live_state,
 )
+from aegisnode.agents.otp_service import get_otp_service
 from aegisnode.ui.styles import get_svg_icon, render_html
 
 def render_mobile_courier_view():
@@ -188,7 +189,7 @@ def render_mobile_courier_view():
         </div>
         <div style="display:flex; justify-content:space-between; font-size:10px; color:#38BDF8; font-family:monospace;">
             <span>Recorded Route: <b>{history_count} checkpoints</b></span>
-            <span style="color:#10B981;">Tower #TWR-UTP-01</span>
+            <span style="color:#10B981;">Simulated Tower: SIM-TWR-UTP-01</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -344,9 +345,13 @@ def render_mobile_courier_view():
         </div>
         """, unsafe_allow_html=True)
 
+        active_otp = get_otp_service().get_active_plain_otp_for_sms_simulation("GDX-SHP-20261003-042")
+        if active_otp:
+            st.info(f"Simulated Customer SMS (+60 12-*** 8892): Passcode is {active_otp}")
+
         col_inp, col_sub = st.columns([2, 1])
         with col_inp:
-            otp_val = st.text_input("6-Digit Code", placeholder="849201", label_visibility="collapsed")
+            otp_val = st.text_input("6-Digit Code", placeholder="Enter 6-digit code", label_visibility="collapsed")
         with col_sub:
             if st.button("Verify OTP", type="primary", use_container_width=True):
                 update_courier_action("SUBMIT_OTP", "fraud_pod_spoof.json", otp_code=otp_val)

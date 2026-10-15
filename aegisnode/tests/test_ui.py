@@ -99,8 +99,19 @@ def test_live_bridge_sync():
     assert s_spoof["warden_action"] == "PACKAGE_FREEZE"
     assert s_spoof["trust_score"] == 18
 
-    # Trigger OTP Challenge
-    s_otp = update_courier_action("SUBMIT_OTP", "fraud_pod_spoof.json", otp_code="849201")
+    # Trigger POD Forgery (issues dynamic HMAC challenge)
+    s_forgery = update_courier_action("TRIGGER_POD_FORGERY", "fraud_pod_spoof.json")
+    assert s_forgery["warden_action"] == "STEP_UP_CHALLENGE"
+
+    # Insecure 000000 should fail
+    s_bad = update_courier_action("SUBMIT_OTP", "fraud_pod_spoof.json", otp_code="000000")
+    assert s_bad["otp_verified"] is False
+
+    # Valid dynamic HMAC OTP should pass
+    from aegisnode.agents.otp_service import get_otp_service
+    dynamic_code = get_otp_service().get_active_plain_otp_for_sms_simulation("GDX-SHP-20261003-042")
+    assert dynamic_code is not None
+    s_otp = update_courier_action("SUBMIT_OTP", "fraud_pod_spoof.json", otp_code=dynamic_code)
     assert s_otp["otp_verified"] is True
     assert s_otp["warden_action"] == "AUTO_CLEAR"
 

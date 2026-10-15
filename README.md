@@ -87,17 +87,21 @@ pip install -r requirements.txt
 ```
 
 ### Step 2: Run Automated Tests
-Verify that all agents and UI components are working properly:
+Verify that all agents, security controls, and UI components are working properly:
 ```bash
-python -m pytest aegisnode/tests
+python -m pytest aegisnode/tests -v
 ```
-*(All 15 automated unit and UI tests should pass with green status.)*
+*(All 35 automated unit, UI, and security regression tests should pass with green status.)*
 
 ### Step 3: Launch the Command Center Dashboard
+Local deployment:
 ```bash
 python -m streamlit run aegisnode/app.py
 ```
 Open your web browser at: **`http://localhost:8501`**
+
+Live Community Cloud Deployment: **[https://aegisnode.streamlit.app/](https://aegisnode.streamlit.app/)**  
+Mobile Courier Terminal: **[https://aegisnode.streamlit.app/?mode=courier](https://aegisnode.streamlit.app/?mode=courier)**
 
 ---
 
@@ -109,7 +113,7 @@ In the dashboard, you can test 4 realistic situations with 1 click:
 | :--- | :--- | :---: | :--- |
 | **1. GPS Teleportation** | Phantom Courier jumps 15 km in 2 min | **18 / 100** (Red) | **Package Freeze:** Handset app locked, courier payout halted. |
 | **2. Clean Delivery** | Legitimate courier route in Subang Jaya | **100 / 100** (Green) | **Auto-Clear:** Verified delivery, payout +RM 4.50 approved. |
-| **3. Forged POD Photo** | Courier photographed car floor mat | **50 / 100** (Amber) | **Step-Up OTP:** App requires 6-digit customer SMS code (`849201`). |
+| **3. Forged POD Photo** | Courier photographed car floor mat | **50 / 100** (Amber) | **Step-Up OTP:** App requires dynamic HMAC-SHA256 customer SMS code (3 attempts max). |
 | **4. API Exfiltration** | Third-party partner scraping 12,500 PII records at 3:14 AM | **12 / 100** (Red) | **Token Revocation:** Gateway API token revoked, IP blacklisted in WAF. |
 
 ---
@@ -122,30 +126,35 @@ UTAR-Hackathon/
 │   ├── app.py                      # Main Streamlit SOC Command Center dashboard
 │   ├── agents/
 │   │   ├── sentinel_agent.py       # Agent 1: Fast velocity & cell tower scanner
-│   │   ├── investigator_agent.py   # Agent 2: OSRM road physics & trust score reasoner
-│   │   ├── warden_agent.py         # Agent 3: Risk-adaptive policy enforcer
-│   │   ├── ledger.py               # SHA-256 cryptographic non-repudiation ledger
-│   │   ├── orchestrator.py         # Orchestrates the 3-agent pipeline
+│   │   ├── investigator_agent.py   # Agent 2: OSRM road physics, Gemini synthesizer & trust score reasoner
+│   │   ├── warden_agent.py         # Agent 3: Risk-adaptive policy enforcer & OTP challenge issuer
+│   │   ├── otp_service.py          # Dynamic HMAC-SHA256 OTP service with lockout limits
+│   │   ├── photo_forensics.py      # Fail-closed optical analysis & perceptual hash replay detection
+│   │   ├── ledger.py               # HMAC-SHA256 signed tamper-evident non-repudiation ledger
+│   │   ├── orchestrator.py         # Orchestrates the multi-agent zero-trust pipeline
 │   │   └── osrm_service.py         # OpenStreetMap road kinematics calculator
 │   ├── data/
+│   │   ├── live_bridge.py          # Real-time multi-device smartphone synchronization bridge
 │   │   ├── fraud_gps_spoof.json    # Scenario 1 data (GPS teleportation)
 │   │   ├── normal_delivery.json    # Scenario 2 data (Clean delivery)
 │   │   ├── fraud_pod_spoof.json    # Scenario 3 data (Forged photo)
-│   │   ├── fraud_api_scraping.json # Scenario 4 data (3 AM API scraping)
+│   │   ├── fraud_api_scraping.json # Scenario 4 data (API scraping traffic)
 │   │   └── generate_telemetry.py   # Telemetry simulation generator
 │   ├── ui/
 │   │   ├── styles.py               # Enterprise cyber-physical dark CSS & SVG icons
 │   │   ├── charts.py               # Plotly trust gauge, penalty waterfall & radar charts
 │   │   ├── map_view.py             # Interactive Folium map with route telemetry
 │   │   ├── pod_viewer.py           # Optical proof-of-delivery inspector
+│   │   ├── mobile_view.py          # Dedicated mobile smartphone driver interface (?mode=courier)
 │   │   ├── handset_simulator.py    # Courier mobile phone handset mockup
 │   │   └── ledger_view.py          # Tamper-evident ledger & JSON export
 │   └── tests/
 │       ├── test_agents.py          # Unit tests for agents & cryptographic ledger
-│       └── test_ui.py              # Unit tests for charts & styles
+│       ├── test_ui.py              # Unit tests for charts, styles & live bridge
+│       └── test_regression.py      # Security & fail-closed regression test suite (14 critical checks)
 ├── PROJECT_PROPOSAL.md             # Complete academic proposal, citations & methodology
 ├── TEAM_GUIDE.md                   # Complete guide for teammates & pitch playbook
-├── requirements.txt                # Project dependencies (Streamlit, Folium, Plotly, etc.)
+├── requirements.txt                # Project dependencies
 └── README.md                       # Main project documentation
 ```
 
