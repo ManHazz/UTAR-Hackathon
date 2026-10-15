@@ -221,3 +221,52 @@ def test_route_history_waypoints():
     assert sc["events"][1]["location"]["label"] == "UTP Main Gate"
 
     reset_live_state()
+
+def test_evaluation_bench_scenarios_and_standby_reset():
+    from aegisnode.data.live_bridge import (
+        get_live_state,
+        reset_live_state,
+        update_courier_action,
+        trigger_gps_spoof,
+        clear_route_history
+    )
+    # Default standby state verification
+    reset_live_state()
+    st0 = get_live_state()
+    assert st0["courier_action"] == "STANDBY"
+    assert st0["warden_action"] == "AUTO_CLEAR"
+    assert st0["trust_score"] == 100
+
+    # 1. Clean delivery scenario
+    st_clean = update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
+    assert st_clean["courier_action"] == "TRIGGER_NORMAL_DELIVERY"
+    assert st_clean["warden_action"] == "AUTO_CLEAR"
+
+    # 2. Forged POD photo scenario
+    st_pod = update_courier_action("TRIGGER_POD_FORGERY", "fraud_pod_spoof.json")
+    assert st_pod["courier_action"] == "TRIGGER_POD_FORGERY"
+    assert st_pod["warden_action"] == "STEP_UP_CHALLENGE"
+
+    # 3. GPS teleportation spoof scenario
+    st_spoof = trigger_gps_spoof(
+        start_lat=4.3852,
+        start_lon=100.9781,
+        target_lat=3.1032,
+        target_lon=101.6445,
+        elapsed_minutes=2.0
+    )
+    assert st_spoof["courier_action"] == "TRIGGER_GPS_SPOOF"
+    assert st_spoof["warden_action"] == "PACKAGE_FREEZE"
+
+    # 4. API harvest scenario
+    st_api = update_courier_action("TRIGGER_API_HARVEST", "fraud_api_scraping.json")
+    assert st_api["courier_action"] == "TRIGGER_API_HARVEST"
+    assert st_api["warden_action"] == "API_CREDENTIAL_REVOKED"
+
+    # 5. Reset to standby
+    reset_live_state()
+    clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
+    st_reset = get_live_state()
+    assert st_reset["courier_action"] == "STANDBY"
+    assert st_reset["warden_action"] == "AUTO_CLEAR"
+    assert st_reset["trust_score"] == 100

@@ -127,60 +127,61 @@ with st.sidebar:
     st.write("**Target Handover:** Chancellor Hall, UTP")
 
     st.markdown("---")
-    st.markdown("#### **Kinematics & Threat Injector**")
-    st.caption("Test how the ReAct Agent responds to simulated telematics changes:")
+    with st.expander("Manual Kinematics Threat Injector", expanded=False):
+        st.caption("Test how the ReAct Agent responds to simulated telematics changes:")
 
-    target_choice = st.selectbox(
-        "Destination Target",
-        options=[
-            "Menara PJX, Petaling Jaya (185.3 km)",
-            "KLCC Twin Towers, Kuala Lumpur (198.5 km)",
-            "Ipoh Station 18 Hub, Perak (32.4 km)"
-        ]
-    )
-    duration_choice = st.selectbox(
-        "Transit Duration",
-        options=[
-            "2.0 min (Teleportation -> ~5,500 km/h)",
-            "15.0 min (High-Speed Vehicle -> ~740 km/h)",
-            "120.0 min (Feasible Highway -> ~92 km/h)"
-        ]
-    )
-
-    dest_coords = {
-        "Menara PJX, Petaling Jaya (185.3 km)": (3.103200, 101.644500, "Menara PJX, Petaling Jaya"),
-        "KLCC Twin Towers, Kuala Lumpur (198.5 km)": (3.157800, 101.711800, "KLCC, Kuala Lumpur"),
-        "Ipoh Station 18 Hub, Perak (32.4 km)": (4.551200, 101.071800, "Ipoh Station 18, Perak"),
-    }
-    dur_mins = {
-        "2.0 min (Teleportation -> ~5,500 km/h)": 2.0,
-        "15.0 min (High-Speed Vehicle -> ~740 km/h)": 15.0,
-        "120.0 min (Feasible Highway -> ~92 km/h)": 120.0,
-    }
-
-    if st.button("Inject Kinematic Test", use_container_width=True, type="secondary"):
-        t_lat, t_lon, t_lbl = dest_coords[target_choice]
-        d_min = dur_mins[duration_choice]
-        trigger_gps_spoof(
-            start_lat=side_lat,
-            start_lon=side_lon,
-            target_lat=t_lat,
-            target_lon=t_lon,
-            start_label=side_label,
-            target_label=t_lbl,
-            elapsed_minutes=d_min
+        target_choice = st.selectbox(
+            "Destination Target",
+            options=[
+                "Menara PJX, Petaling Jaya (185.3 km)",
+                "KLCC Twin Towers, Kuala Lumpur (198.5 km)",
+                "Ipoh Station 18 Hub, Perak (32.4 km)"
+            ]
         )
-        st.rerun()
+        duration_choice = st.selectbox(
+            "Transit Duration",
+            options=[
+                "2.0 min (Teleportation -> ~5,500 km/h)",
+                "15.0 min (High-Speed Vehicle -> ~740 km/h)",
+                "120.0 min (Feasible Highway -> ~92 km/h)"
+            ]
+        )
 
-    c_rst1, c_rst2 = st.columns(2)
-    with c_rst1:
-        if st.button("Clean Route", use_container_width=True):
-            update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
+        dest_coords = {
+            "Menara PJX, Petaling Jaya (185.3 km)": (3.103200, 101.644500, "Menara PJX, Petaling Jaya"),
+            "KLCC Twin Towers, Kuala Lumpur (198.5 km)": (3.157800, 101.711800, "KLCC, Kuala Lumpur"),
+            "Ipoh Station 18 Hub, Perak (32.4 km)": (4.551200, 101.071800, "Ipoh Station 18, Perak"),
+        }
+        dur_mins = {
+            "2.0 min (Teleportation -> ~5,500 km/h)": 2.0,
+            "15.0 min (High-Speed Vehicle -> ~740 km/h)": 15.0,
+            "120.0 min (Feasible Highway -> ~92 km/h)": 120.0,
+        }
+
+        if st.button("Inject Kinematic Test", use_container_width=True, type="secondary"):
+            t_lat, t_lon, t_lbl = dest_coords[target_choice]
+            d_min = dur_mins[duration_choice]
+            trigger_gps_spoof(
+                start_lat=side_lat,
+                start_lon=side_lon,
+                target_lat=t_lat,
+                target_lon=t_lon,
+                start_label=side_label,
+                target_label=t_lbl,
+                elapsed_minutes=d_min
+            )
             st.rerun()
-    with c_rst2:
-        if st.button("Reset State", use_container_width=True):
-            reset_live_state()
-            st.rerun()
+
+        c_rst1, c_rst2 = st.columns(2)
+        with c_rst1:
+            if st.button("Clean Route", use_container_width=True):
+                update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
+                st.rerun()
+        with c_rst2:
+            if st.button("Reset State", use_container_width=True):
+                reset_live_state()
+                clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
+                st.rerun()
 
     st.markdown("---")
     animate_pitch = st.checkbox("Presentation Latency Mode (1.8s)", value=False, help="Simulates multi-agent scanning latency")
@@ -202,6 +203,96 @@ render_html(f"""
     </div>
 </div>
 """)
+
+# --- SMARTPHONE LIVE PAIRING STATION & EVALUATION BENCH ---
+qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://aegisnode.streamlit.app/?mode=courier"
+smartphone_svg = get_svg_icon("smartphone", color="#38BDF8", size=22)
+
+render_html(f"""
+<div class="pairing-box">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+        <div style="display:flex; align-items:center; gap:16px;">
+            <div style="background:#FFFFFF; padding:6px; border-radius:8px; display:inline-block; box-shadow:0 0 12px rgba(56,189,248,0.2);">
+                <img src="{qr_url}" width="96" height="96" alt="Scan to test on phone" style="display:block;" />
+            </div>
+            <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    {smartphone_svg}
+                    <span style="font-size:14px; font-weight:800; color:#F8FAFC; letter-spacing:0.04em; font-family:'JetBrains Mono', monospace;">
+                        JUDGE LIVE SMARTPHONE PAIRING STATION
+                    </span>
+                    <span style="background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3); font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; font-family:monospace;">
+                        ONLINE
+                    </span>
+                </div>
+                <div style="font-size:12px; color:#CBD5E1; margin-top:6px; line-height:1.5;">
+                    <b>Step 1:</b> Scan the QR code with your mobile camera (or click test buttons below).<br>
+                    <b>Step 2:</b> Allow GPS & Camera on your handset.<br>
+                    <b>Step 3:</b> Submit a delivery or capture a photo to watch real-time autonomous SOC triage.
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+            <span style="font-size:10px; color:#64748B; font-family:monospace;">Direct URL: ?mode=courier</span>
+        </div>
+    </div>
+</div>
+""")
+
+col_sim1, col_sim2 = st.columns([1, 1])
+with col_sim1:
+    if st.button("Open Handset in This Tab", use_container_width=True, help="Switch current view to mobile driver terminal"):
+        st.session_state.mobile_mode_active = True
+        st.rerun()
+with col_sim2:
+    st.link_button("Launch Handset in New Window", "https://aegisnode.streamlit.app/?mode=courier", use_container_width=True)
+
+render_html("""
+<div style="font-size:11px; font-weight:800; color:#94A3B8; font-family:'JetBrains Mono', monospace; text-transform:uppercase; letter-spacing:0.05em; margin: 14px 0 8px 0;">
+    Evaluation Bench - One-Click Zero-Trust Attack & Defense Scenarios
+</div>
+""")
+
+c_sc1, c_sc2, c_sc3, c_sc4, c_sc5 = st.columns(5)
+with c_sc1:
+    if st.button("1. Clean Delivery\n[Good]", use_container_width=True, help="Legitimate handover: verified UTP route, authentic photo, auto-clear"):
+        update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
+        st.session_state.otp_cleared = True
+        st.session_state.supervisor_action = None
+        st.rerun()
+with c_sc2:
+    if st.button("2. Forged Photo\n[Medium]", use_container_width=True, help="Low-texture POD photo / floor-mat attack: autonomous SMS OTP step-up challenge"):
+        update_courier_action("TRIGGER_POD_FORGERY", "fraud_pod_spoof.json")
+        st.session_state.otp_cleared = False
+        st.session_state.supervisor_action = None
+        st.rerun()
+with c_sc3:
+    if st.button("3. Phantom Courier\n[Bad / Spoof]", use_container_width=True, help="GPS teleportation: 185 km to PJ in 2 min (5,500 km/h), delivery frozen by Warden"):
+        trigger_gps_spoof(
+            start_lat=4.385200,
+            start_lon=100.978100,
+            target_lat=3.103200,
+            target_lon=101.644500,
+            start_label="UTP Campus, Tronoh",
+            target_label="Menara PJX, Petaling Jaya",
+            elapsed_minutes=2.0
+        )
+        st.session_state.otp_cleared = False
+        st.session_state.supervisor_action = None
+        st.rerun()
+with c_sc4:
+    if st.button("4. Cyber API Theft\n[Bad / Cyber]", use_container_width=True, help="Subcontractor credential harvest at 3 AM from Tor exit: token revoked & WAF blacklist"):
+        update_courier_action("TRIGGER_API_HARVEST", "fraud_api_scraping.json")
+        st.session_state.otp_cleared = False
+        st.session_state.supervisor_action = None
+        st.rerun()
+with c_sc5:
+    if st.button("Reset to Standby\n[Monitoring]", use_container_width=True, help="Return to clean nominal fleet monitoring state"):
+        reset_live_state()
+        clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
+        st.session_state.otp_cleared = False
+        st.session_state.supervisor_action = None
+        st.rerun()
 
 # --- ACTIVE FIELD TELEMATICS CONSOLE ---
 render_html("""
@@ -280,11 +371,104 @@ if animate_pitch and sentinel.get("anomalies_detected", False):
     with st.spinner("Investigator verifying kinematics & POD heuristics..."):
         time.sleep(0.6)
 
-# --- INCIDENT BRIEFING CARD (CONTEXTUAL FACTS, NO AI SLOP) ---
+# --- EVALUATE OPERATIONAL MODE: STANDBY MONITORING VS ACTIVE INCIDENT ---
+courier_act = bridge_state.get("courier_action", "STANDBY")
+is_standby = (courier_act == "STANDBY")
+
+if is_standby:
+    # --- FLEET STANDBY & OPERATIONAL MONITORING OVERVIEW ---
+    render_html("""
+    <div class="standby-hero">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <div style="font-size:1.15rem; font-weight:800; color:#F8FAFC; letter-spacing:0.04em; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-block; width:8px; height:8px; background:#10B981; border-radius:50%;"></span>
+                    FLEET MONITORING NOMINAL — ZERO ACTIVE BREACHES
+                </div>
+                <div style="font-size:0.82rem; color:#94A3B8; margin-top:4px;">
+                    All active courier edge devices reporting valid GPS telemetry and nominal speeds within UTP campus geofence. Threat monitors armed.
+                </div>
+            </div>
+            <div>
+                <span style="background:rgba(16,185,129,0.12); color:#10B981; border:1px solid rgba(16,185,129,0.3); font-size:11px; font-weight:700; padding:4px 10px; border-radius:4px; font-family:monospace;">
+                    SOC ARMED & READY
+                </span>
+            </div>
+        </div>
+    </div>
+    """)
+
+    m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+    with m_col1:
+        st.metric("Active Couriers", "1 Online", "CR-9042 • EX5")
+    with m_col2:
+        st.metric("Kinematic Compliance", "100%", "Nominal Speed")
+    with m_col3:
+        st.metric("Fleet Trust Score", "100 / 100", "Zero Penalties")
+    with m_col4:
+        st.metric("OTP Challenge Rate", "0.0%", "Step-Up Armed")
+    with m_col5:
+        st.metric("Signed Ledger Blocks", f"{len(result['audit_trail'])} Blocks", "Verified Anchor")
+
+    col_g1, col_g2 = st.columns([1, 1], gap="medium")
+    with col_g1:
+        render_html("""
+        <div class="panel-header">
+            <span>How Judges Can Test AegisNode</span>
+        </div>
+        <div style="background:#0D1322; border:1px solid #1E293B; border-radius:8px; padding:16px; font-size:12px; color:#CBD5E1; line-height:1.7;">
+            <div style="font-family:'JetBrains Mono', monospace; font-size:12px; font-weight:800; color:#38BDF8; margin-bottom:10px;">
+                THREE WAYS TO TEST THE SYSTEM:
+            </div>
+            <div style="margin-bottom:12px;">
+                <b style="color:#10B981;">1. Live Smartphone Demonstration (Recommended):</b><br>
+                Scan the QR code at the top of this dashboard using your phone's camera. Allow GPS & Camera. Submit a clean delivery or snap a photo to watch the autonomous ReAct engine evaluate edge signals in real time.
+            </div>
+            <div style="margin-bottom:12px;">
+                <b style="color:#F59E0B;">2. Evaluation Bench (One-Click Scenarios):</b><br>
+                Click any scenario button above to instantly trigger:
+                <ul style="margin:4px 0 0 16px; padding:0;">
+                    <li><b>1. Clean Delivery:</b> Verified physical delivery route on UTP campus roads [Good].</li>
+                    <li><b>2. Forged Photo:</b> Low-texture optical proof triggering autonomous OTP step-up challenge [Medium].</li>
+                    <li><b>3. Phantom Courier:</b> Impossible 185 km kinematic jump in 2 minutes triggering delivery freeze [Bad / Spoof].</li>
+                    <li><b>4. Cyber API Theft:</b> High-rate credential exfiltration from Tor node triggering token revocation [Bad / Cyber].</li>
+                </ul>
+            </div>
+            <div>
+                <b style="color:#38BDF8;">3. Sidebar Kinematics Threat Injector:</b><br>
+                Expand the injector in the left sidebar to simulate custom coordinate leaps and travel durations.
+            </div>
+        </div>
+        """)
+    with col_g2:
+        render_html("""
+        <div class="panel-header">
+            <span>Active Patrol Corridor & Fleet Map (UTP Campus)</span>
+        </div>
+        """)
+        render_interactive_map(scenario_data, False, height=360)
+
+    render_html("""
+    <div class="panel-header" style="margin-top:20px;">
+        <span>Verified Cryptographic Audit Trail (Standby Ledger Verification)</span>
+    </div>
+    """)
+    render_cryptographic_ledger(result["audit_trail"], ledger_status)
+
+    st.stop()
+
+# --- ACTIVE INCIDENT INVESTIGATION & ENFORCEMENT VIEW ---
+col_ret1, col_ret2 = st.columns([1, 4])
+with col_ret1:
+    if st.button("<- Return to Fleet Standby", use_container_width=True, type="secondary"):
+        reset_live_state()
+        clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
+        st.session_state.otp_cleared = False
+        st.session_state.supervisor_action = None
+        st.rerun()
+
 is_api_scenario = "subcontractor_id" in scenario_data
 warden_act = warden.get("action", "AUTO_CLEAR")
-
-courier_act = bridge_state.get("courier_action", "STANDBY")
 live_spd = bridge_state.get("highest_velocity_kmh", float(sentinel.get("highest_velocity_kmh", 30.0)))
 live_dist = bridge_state.get("spoof_distance_km", 185.3)
 origin_lbl = bridge_state.get("courier_location_label", "UTP Campus, Tronoh")

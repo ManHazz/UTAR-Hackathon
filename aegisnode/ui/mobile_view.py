@@ -418,15 +418,33 @@ def render_mobile_courier_view():
             )
             st.rerun()
 
-    col_btn3, col_btn4 = st.columns(2)
-    with col_btn3:
+    col_mb1, col_mb2 = st.columns(2)
+    with col_mb1:
         if st.button("Submit Clean Delivery", type="primary", use_container_width=True, help="Legitimate handover"):
             update_courier_action("TRIGGER_NORMAL_DELIVERY", "normal_delivery.json")
             st.rerun()
+    with col_mb2:
+        if st.button("Simulate Floor Mat Photo", use_container_width=True, help="Trigger low-texture POD forgery requiring OTP"):
+            update_courier_action("TRIGGER_POD_FORGERY", "fraud_pod_spoof.json")
+            st.rerun()
 
-    with col_btn4:
-        if st.button("Reset Terminal", use_container_width=True, help="Reset to nominal state"):
+    col_mb3, col_mb4 = st.columns(2)
+    with col_mb3:
+        if st.button("Simulate 185km Spoof Jump", use_container_width=True, help="Simulate impossible velocity teleportation"):
+            trigger_gps_spoof(
+                start_lat=cur_lat,
+                start_lon=cur_lon,
+                target_lat=3.103200,
+                target_lon=101.644500,
+                start_label=cur_label,
+                target_label="Menara PJX, Petaling Jaya",
+                elapsed_minutes=2.0
+            )
+            st.rerun()
+    with col_mb4:
+        if st.button("Reset Terminal to Standby", use_container_width=True, help="Reset to nominal state"):
             reset_live_state()
+            clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
             st.rerun()
 
     st.markdown("""

@@ -708,11 +708,32 @@ def get_custom_css() -> str:
         overflow: hidden;
     }
 
-    /* Expander styling */
-    div[data-testid="stExpander"] {
-        background: #0B101D;
-        border: 1px solid #1E293B;
-        border-radius: 6px;
+    /* 14. Judge Pairing & Interactive Self-Service Console */
+    .pairing-box {
+        background: linear-gradient(135deg, rgba(14, 27, 49, 0.7) 0%, rgba(11, 17, 30, 0.9) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .standby-hero {
+        background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.4) 0%, rgba(11, 16, 28, 0.8) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .scenario-pill-good {
+        border-left: 3px solid #10B981 !important;
+    }
+    .scenario-pill-medium {
+        border-left: 3px solid #F59E0B !important;
+    }
+    .scenario-pill-bad {
+        border-left: 3px solid #EF4444 !important;
     }
 </style>
 """
