@@ -73,7 +73,7 @@ def render_cryptographic_ledger(audit_trail: List[Dict[str, Any]], ledger_status
         }
         json_bytes = json.dumps(export_payload, indent=2).encode("utf-8")
 
-        col_t1, col_t2, col_t3 = st.columns(3)
+        col_t1, col_t2, col_t3, col_t4 = st.columns(4)
         with col_t1:
             if st.button("Simulate Malicious SQL Alteration", use_container_width=True):
                 st.session_state.tamper_simulated = True
@@ -81,6 +81,12 @@ def render_cryptographic_ledger(audit_trail: List[Dict[str, Any]], ledger_status
             if st.button("Reset Ledger Integrity", use_container_width=True):
                 st.session_state.tamper_simulated = False
         with col_t3:
+            if st.button("Purge Test Blocks", use_container_width=True, help="Reinitialize ledger back to clean genesis block"):
+                if "ledger" in st.session_state:
+                    st.session_state.ledger.reset()
+                st.session_state.tamper_simulated = False
+                st.rerun()
+        with col_t4:
             st.download_button(
                 "Export Audit Package (JSON)",
                 data=json_bytes,

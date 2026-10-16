@@ -26,12 +26,15 @@ def get_svg_icon(name: str, color: str = "#94A3B8", size: int = 16) -> str:
     }
     return icons.get(name, "")
 
-import textwrap
 import streamlit as st
 
 def render_html(html_str: str):
     """Safely renders HTML without markdown converting indented lines into code blocks."""
-    st.markdown(textwrap.dedent(html_str).strip(), unsafe_allow_html=True)
+    cleaned = "\n".join(line.strip() for line in html_str.splitlines() if line.strip())
+    if hasattr(st, "html"):
+        st.html(cleaned)
+    else:
+        st.markdown(cleaned, unsafe_allow_html=True)
 
 def get_custom_css() -> str:
     """

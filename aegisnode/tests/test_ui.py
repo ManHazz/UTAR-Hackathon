@@ -265,8 +265,8 @@ def test_evaluation_bench_scenarios_and_standby_reset():
 
     # 5. Reset to standby
     reset_live_state()
-    clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
     st_reset = get_live_state()
     assert st_reset["courier_action"] == "STANDBY"
     assert st_reset["warden_action"] == "AUTO_CLEAR"
     assert st_reset["trust_score"] == 100
+    assert len(st_reset["route_history"]) == 3

@@ -12,6 +12,7 @@ from folium.plugins import AntPath
 from streamlit_folium import st_folium
 
 from aegisnode.agents.osrm_service import get_leg_route_geometry, haversine_distance_km
+from aegisnode.ui.styles import render_html
 
 def _parse_timestamp(ts_str: str) -> float:
     try:
@@ -39,10 +40,10 @@ def render_interactive_map(scenario_data: Dict[str, Any], has_anomaly: bool, hei
     mid_lat = (first_loc["lat"] + last_loc["lat"]) / 2
     mid_lon = (first_loc["lon"] + last_loc["lon"]) / 2
 
-    # Map initialization centered on the transit bounding box
+    # Map initialization centered on the transit bounding box (UTP campus focus)
     m = folium.Map(
         location=[mid_lat, mid_lon],
-        zoom_start=12,
+        zoom_start=15,
         tiles="OpenStreetMap"
     )
 
@@ -222,15 +223,11 @@ def render_interactive_map(scenario_data: Dict[str, Any], has_anomaly: bool, hei
             m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]], padding=(25, 25))
 
     res = st_folium(m, height=height, width="100%", returned_objects=[])
-    import streamlit as st
-    st.markdown(
-        """
-        <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:11px; color:#94A3B8; margin-top:4px; padding:6px 10px; background:rgba(15,23,42,0.6); border-radius:6px; border:1px solid rgba(148,163,184,0.15);">
-            <span><b style="color:#0284C7;">― Animated Blue:</b> Verified Physical Road Graph (OSRM Traversal)</span>
-            <span><b style="color:#EF4444;">-- Rapid Pulsing Red:</b> Flagged Anomalous Road Route (458 km/h Teleportation)</span>
-            <span><b style="color:#38BDF8;">● Dots:</b> IoT Telemetry Trajectory Samples</span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    render_html("""
+    <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:11px; color:#94A3B8; margin-top:4px; padding:6px 10px; background:rgba(15,23,42,0.6); border-radius:6px; border:1px solid rgba(148,163,184,0.15);">
+        <span><b style="color:#0284C7;">― Animated Blue:</b> Verified Physical Road Graph (OSRM Traversal)</span>
+        <span><b style="color:#EF4444;">-- Rapid Pulsing Red:</b> Flagged Anomalous Road Route (458 km/h Teleportation)</span>
+        <span><b style="color:#38BDF8;">● Dots:</b> IoT Telemetry Trajectory Samples</span>
+    </div>
+    """)
     return res

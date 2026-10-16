@@ -453,7 +453,7 @@ def build_live_scenario_data(state: Optional[Dict[str, Any]] = None) -> Dict[str
     photo_var = state.get("live_photo_variance", 72.4)
 
     history = state.get("route_history", [])
-    if not history:
+    if not history or len(history) <= 1:
         history = [
             {
                 "lat": 4.388500,

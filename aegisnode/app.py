@@ -289,7 +289,8 @@ with c_sc4:
 with c_sc5:
     if st.button("Reset to Standby\n[Monitoring]", use_container_width=True, help="Return to clean nominal fleet monitoring state"):
         reset_live_state()
-        clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
+        if "ledger" in st.session_state:
+            st.session_state.ledger.reset()
         st.session_state.otp_cleared = False
         st.session_state.supervisor_action = None
         st.rerun()
@@ -462,7 +463,8 @@ col_ret1, col_ret2 = st.columns([1, 4])
 with col_ret1:
     if st.button("<- Return to Fleet Standby", use_container_width=True, type="secondary"):
         reset_live_state()
-        clear_route_history(4.385200, 100.978100, "UTP Campus, Tronoh, Perak")
+        if "ledger" in st.session_state:
+            st.session_state.ledger.reset()
         st.session_state.otp_cleared = False
         st.session_state.supervisor_action = None
         st.rerun()
